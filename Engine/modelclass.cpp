@@ -313,6 +313,11 @@ bool ModelClass::LoadModel(char* filename)
 	return true;
 }
 
+bool ModelClass::LoadOBJModel(const string& filename)
+{
+	return false;
+}
+
 
 void ModelClass::ReleaseModel()
 {

@@ -99,6 +99,9 @@
     <ClInclude Include="systemclass.h">
       <Filter>Header Files\Core</Filter>
     </ClInclude>
+    <ClInclude Include="OBJLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="d3dclass.cpp">
@@ -151,6 +154,9 @@
     </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="OBJLoader.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

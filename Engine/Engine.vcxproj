@@ -29,6 +29,7 @@
     <ClInclude Include="lightclass.h" />
     <ClInclude Include="lightshaderclass.h" />
     <ClInclude Include="modelclass.h" />
+    <ClInclude Include="OBJLoader.h" />
     <ClInclude Include="positionclass.h" />
     <ClInclude Include="shadermanagerclass.h" />
     <ClInclude Include="systemclass.h" />
@@ -48,6 +49,7 @@
     <ClCompile Include="lightshaderclass.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="modelclass.cpp" />
+    <ClCompile Include="OBJLoader.cpp" />
     <ClCompile Include="positionclass.cpp" />
     <ClCompile Include="shadermanagerclass.cpp" />
     <ClCompile Include="systemclass.cpp" />
