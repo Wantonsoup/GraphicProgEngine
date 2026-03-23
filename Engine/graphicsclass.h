@@ -20,6 +20,7 @@
 #include "lightclass.h"
 #include "modelclass.h"
 #include "bumpmodelclass.h"
+#include "cubeskybox.h"
 
 
 /////////////
@@ -87,7 +88,8 @@ private:
 	PositionClass* m_Position;
 	CameraClass* m_Camera;
 	LightClass* m_Light;
-	
+	CubeSkyBox* m_Skybox;
+
 	// scene model
 	std::vector<SceneModel> m_SceneModels;
 	std::vector<SceneBumpModel> m_SceneBumpModels;

@@ -106,16 +106,16 @@ bool CubeSkyBox::LoadAndInitializeBuffers(ID3D11Device* device)
 		{
 			// Front face
 			0, 1, 2, 0, 2, 3,
-				// Back face
-				4, 6, 5, 4, 7, 6,
-				// Left face
-				4, 5, 1, 4, 1, 0,
-				// Right face
-				3, 2, 6, 3, 6, 7,
-				// Top face
-				7, 4, 0, 7, 0, 3,
-				// Bottom face
-				5, 6, 2, 5, 2, 1
+			// Back face
+			4, 6, 5, 4, 7, 6,
+			// Left face
+			4, 5, 1, 4, 1, 0,
+			// Right face
+			3, 2, 6, 3, 6, 7,
+			// Top face
+			7, 4, 0, 7, 0, 3,
+			// Bottom face
+			5, 6, 2, 5, 2, 1
 		};
 
 

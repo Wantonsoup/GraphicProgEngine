@@ -20,7 +20,7 @@ TextureClass::~TextureClass()
 }
 
 
-bool TextureClass::Initialize(ID3D11Device* device, WCHAR* filename)
+bool TextureClass::Initialize(ID3D11Device* device, const WCHAR* filename)
 {
 	HRESULT result;
 

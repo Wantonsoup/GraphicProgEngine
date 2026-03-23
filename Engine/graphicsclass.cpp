@@ -13,6 +13,7 @@ GraphicsClass::GraphicsClass()
 	m_Light = 0;
 	m_Position = 0;
 	m_Camera = 0;
+	m_Skybox = 0;
 }
 
 
@@ -121,6 +122,21 @@ bool GraphicsClass::Initialize(HINSTANCE hinstance, HWND hwnd, int screenWidth, 
 	m_Light->SetDirection(0.0f, 0.0f, 1.0f);
 	m_Light->SetSpecularColor(1.0f, 1.0f, 1.0f, 1.0f);
 	m_Light->SetSpecularPower(64.0f);
+
+	// Create the skybox object.
+	m_Skybox = new CubeSkyBox;
+	if(!m_Skybox)
+	{
+		return false;
+	}
+
+	// Initialize the skybox object.
+	result = m_Skybox->Initialize(m_D3D->GetDevice(), L"../Engine/data/skymap.dds");
+	if (!result)
+	{
+		MessageBox(hwnd, L"Could not initialize the skybox.", L"Error", MB_OK);
+		return false;
+	}
 
 	// Define all scene models (stores as data rather then copy & paste blocks) //
 	struct ModelDef
@@ -291,6 +307,14 @@ void GraphicsClass::Shutdown()
 		m_Input = 0;
 	}
 
+	//Release the skybox object.
+	if (m_Skybox)
+	{
+		m_Skybox->Shutdown();
+		delete m_Skybox;
+		m_Skybox = 0;
+	}
+
 	return;
 }
 
@@ -400,6 +424,24 @@ bool GraphicsClass::Render()
 	m_Camera->GetViewMatrix(viewMatrix);
 	m_D3D->GetProjectionMatrix(projectionMatrix);
 
+	//disable depth & render skybox
+	m_D3D->DisableDepth();
+
+	XMMATRIX skyboxViewMatrix = viewMatrix;
+	skyboxViewMatrix.r[3] = DirectX::XMVectorSet(0, 0, 0, 1); // Remove translation, we don't want to translate the cube based on the view matrix
+
+
+	// Render the skybox
+	m_Skybox->Render(m_D3D->GetDeviceContext());
+	result = m_ShaderManager->RenderCubeMapShader(m_D3D->GetDeviceContext(), m_Skybox->GetIndexCount(), worldMatrix, skyboxViewMatrix, projectionMatrix, m_Skybox->GetTexture());
+
+	if (!result)
+	{
+		return false;
+	}
+
+	m_D3D->EnableDepth();
+
 	// Render all models using the texture or light shader. 
 	for (auto& sm : m_SceneModels)
 	{
@@ -438,6 +480,7 @@ bool GraphicsClass::Render()
 			return false;
 		}
 	}
+
 
 	// Render all bump-mapped models.
 	for (auto& sbm : m_SceneBumpModels)

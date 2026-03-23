@@ -11,7 +11,8 @@ D3DClass::D3DClass()
 	m_deviceContext = 0;
 	m_renderTargetView = 0;
 	m_depthStencilBuffer = 0;
-	m_depthStencilState = 0;
+	m_depthStencilEnabledState = 0;
+	m_depthStencilDisabledState = 0;
 	m_depthStencilView = 0;
 	m_rasterState = 0;
 }
@@ -291,14 +292,33 @@ bool D3DClass::Initialize(int screenWidth, int screenHeight, bool vsync, HWND hw
 	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
 	// Create the depth stencil state.
-	result = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilState);
+	result = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilEnabledState);
 	if(FAILED(result))
 	{
 		return false;
 	}
 
+	// Set up the description of the stencil state.
+	depthStencilDesc.DepthEnable = true;
+	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+
+	depthStencilDesc.StencilEnable = false;
+	depthStencilDesc.StencilReadMask = 0xFF;
+	depthStencilDesc.StencilWriteMask = 0xFF;
+
+	// Create the depth stencil state.
+	result = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilDisabledState);
+	if (FAILED(result))
+	{
+		return false;
+	}
+
+	//Enable depth stencil by default
+	EnableDepth();
+
 	// Set the depth stencil state.
-	m_deviceContext->OMSetDepthStencilState(m_depthStencilState, 1);
+	m_deviceContext->OMSetDepthStencilState(m_depthStencilEnabledState, 1);
 
 	// Initialize the depth stencil view.
 	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
@@ -392,10 +412,16 @@ void D3DClass::Shutdown()
 		m_depthStencilView = 0;
 	}
 
-	if(m_depthStencilState)
+	if (m_depthStencilEnabledState)
 	{
-		m_depthStencilState->Release();
-		m_depthStencilState = 0;
+		m_depthStencilEnabledState->Release();
+		m_depthStencilEnabledState = 0;
+	}
+
+	if (m_depthStencilDisabledState)
+	{
+		m_depthStencilDisabledState->Release();
+		m_depthStencilDisabledState = 0;
 	}
 
 	if(m_depthStencilBuffer)
@@ -509,4 +535,17 @@ void D3DClass::GetVideoCardInfo(char* cardName, int& memory)
 	strcpy_s(cardName, 128, m_videoCardDescription);
 	memory = m_videoCardMemory;
 	return;
+}
+
+void D3DClass::EnableDepth()
+{
+
+	// Set the depth stencil state.
+	m_deviceContext->OMSetDepthStencilState(m_depthStencilEnabledState, 1);
+}
+
+void D3DClass::DisableDepth()
+{
+	// Set the depth stencil state.
+	m_deviceContext->OMSetDepthStencilState(m_depthStencilDisabledState, 0);
 }

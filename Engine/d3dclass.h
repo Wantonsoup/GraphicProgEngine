@@ -49,6 +49,9 @@ public:
 
 	void GetVideoCardInfo(char*, int&);
 
+	void EnableDepth();
+	void DisableDepth();
+
 private:
 	bool m_vsync_enabled;
 	int m_videoCardMemory;
@@ -58,7 +61,8 @@ private:
 	ID3D11DeviceContext* m_deviceContext;
 	ID3D11RenderTargetView* m_renderTargetView;
 	ID3D11Texture2D* m_depthStencilBuffer;
-	ID3D11DepthStencilState* m_depthStencilState;
+	ID3D11DepthStencilState* m_depthStencilEnabledState;
+	ID3D11DepthStencilState* m_depthStencilDisabledState;
 	ID3D11DepthStencilView* m_depthStencilView;
 	ID3D11RasterizerState* m_rasterState;
 
