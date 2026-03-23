@@ -1,0 +1,18 @@
+////////////////////////////////////////////////////////////////////////////////
+// Filename: cubemap.ps
+////////////////////////////////////////////////////////////////////////////////
+
+TextureCube<float4> skyboxTexture : register(t0);
+SamplerState samplerState : register(s0);
+
+struct PS_INPUT
+{
+    float4 position : SV_POSITION;
+    float3 texcoord : TEXCOORD;
+};
+
+float4 PS_Skybox(PS_INPUT input) : SV_TARGET
+{
+   return skyboxTexture.Sample(samplerState, input.texcoord, 0.0f);
+   // return float4(1.0f, 0.5f, 0.5f, 1.0f);
+}

@@ -9,6 +9,7 @@ ShaderManagerClass::ShaderManagerClass()
 	m_TextureShader = 0;
 	m_LightShader = 0;
 	m_BumpMapShader = 0;
+	m_CubeMapShader = 0;
 }
 
 
@@ -72,6 +73,21 @@ bool ShaderManagerClass::Initialize(ID3D11Device* device, HWND hwnd)
 		return false;
 	}
 
+	//Create the cube map shader object.
+	m_CubeMapShader = new CubeMapShaderClass;
+	if(!m_CubeMapShader)
+	{
+		return false;
+	}
+
+	//Initialize the cube map shader object.
+	result = m_CubeMapShader->Initialize(device, hwnd);
+	if(!result)
+	{
+		MessageBox(hwnd, L"Could not initialize the cube map shader object.", L"Error", MB_OK);
+		return false;
+	}
+
 	return true;
 }
 
@@ -102,6 +118,13 @@ void ShaderManagerClass::Shutdown()
 		m_TextureShader = 0;
 	}
 
+	// Release the cube map shader object.
+	if (m_CubeMapShader)
+	{
+		m_CubeMapShader->Shutdown();
+		delete m_CubeMapShader;
+		m_CubeMapShader = 0;
+	}
 	return;
 }
 
@@ -152,6 +175,22 @@ bool ShaderManagerClass::RenderBumpMapShader(ID3D11DeviceContext* deviceContext,
 	// Render the model using the bump map shader.
 	result = m_BumpMapShader->Render(deviceContext, indexCount, worldMatrix, viewMatrix, projectionMatrix, colorTexture, normalTexture, lightDirection, diffuse);
 	if(!result)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool ShaderManagerClass::RenderCubeMapShader(ID3D11DeviceContext* device, int indexCount, const XMMATRIX& worldMatrix, const XMMATRIX& viewMatrix, const XMMATRIX& projectionMatrix,
+	ID3D11ShaderResourceView* texture)
+{
+	bool result;
+
+
+	// Render the model using the texture shader.
+	result = m_CubeMapShader->Render(device, indexCount, worldMatrix, viewMatrix, projectionMatrix, texture);
+	if (!result)
 	{
 		return false;
 	}

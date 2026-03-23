@@ -63,12 +63,6 @@
     <ClInclude Include="inputclass.h">
       <Filter>Header Files\Input</Filter>
     </ClInclude>
-    <ClInclude Include="cameraclass.h">
-      <Filter>Header Files\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="positionclass.h">
-      <Filter>Header Files\Math</Filter>
-    </ClInclude>
     <ClInclude Include="bumpmodelclass.h">
       <Filter>Header Files\Models</Filter>
     </ClInclude>
@@ -99,7 +93,16 @@
     <ClInclude Include="systemclass.h">
       <Filter>Header Files\Core</Filter>
     </ClInclude>
-    <ClInclude Include="OBJLoader.h">
+    <ClInclude Include="cameraclass.h">
+      <Filter>Header Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="positionclass.h">
+      <Filter>Header Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="cubeskybox.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cubemapshaderclass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -155,7 +158,10 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files\Core</Filter>
     </ClCompile>
-    <ClCompile Include="OBJLoader.cpp">
+    <ClCompile Include="cubeskybox.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cubemapshaderclass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -179,5 +185,11 @@
       <Filter>Shader Files</Filter>
     </None>
     <None Include="ClassDiagram.cd" />
+    <None Include="cubemap.vs">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="cubemap.ps">
+      <Filter>Shader Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -12,7 +12,7 @@
 #include "textureshaderclass.h"
 #include "lightshaderclass.h"
 #include "bumpmapshaderclass.h"
-
+#include "cubemapshaderclass.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class name: ShaderManagerClass
@@ -35,10 +35,13 @@ public:
 	bool RenderBumpMapShader(ID3D11DeviceContext*, int, const XMMATRIX&, const XMMATRIX&, const XMMATRIX&, ID3D11ShaderResourceView*,
 		ID3D11ShaderResourceView*, XMFLOAT3, XMFLOAT4);
 
+	bool RenderCubeMapShader(ID3D11DeviceContext*, int, const XMMATRIX&, const XMMATRIX&, const XMMATRIX&, ID3D11ShaderResourceView*);
+
 private:
 	TextureShaderClass* m_TextureShader;
 	LightShaderClass* m_LightShader;
 	BumpMapShaderClass* m_BumpMapShader;
+	CubeMapShaderClass* m_CubeMapShader;
 };
 
 #endif

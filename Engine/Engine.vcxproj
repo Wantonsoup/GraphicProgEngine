@@ -22,6 +22,8 @@
     <ClInclude Include="bumpmapshaderclass.h" />
     <ClInclude Include="bumpmodelclass.h" />
     <ClInclude Include="cameraclass.h" />
+    <ClInclude Include="cubemapshaderclass.h" />
+    <ClInclude Include="cubeskybox.h" />
     <ClInclude Include="d3dclass.h" />
     <ClInclude Include="DDSTextureLoader.h" />
     <ClInclude Include="graphicsclass.h" />
@@ -29,7 +31,6 @@
     <ClInclude Include="lightclass.h" />
     <ClInclude Include="lightshaderclass.h" />
     <ClInclude Include="modelclass.h" />
-    <ClInclude Include="OBJLoader.h" />
     <ClInclude Include="positionclass.h" />
     <ClInclude Include="shadermanagerclass.h" />
     <ClInclude Include="systemclass.h" />
@@ -41,6 +42,8 @@
     <ClCompile Include="bumpmapshaderclass.cpp" />
     <ClCompile Include="bumpmodelclass.cpp" />
     <ClCompile Include="cameraclass.cpp" />
+    <ClCompile Include="cubemapshaderclass.cpp" />
+    <ClCompile Include="cubeskybox.cpp" />
     <ClCompile Include="d3dclass.cpp" />
     <ClCompile Include="DDSTextureLoader.cpp" />
     <ClCompile Include="graphicsclass.cpp" />
@@ -49,7 +52,6 @@
     <ClCompile Include="lightshaderclass.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="modelclass.cpp" />
-    <ClCompile Include="OBJLoader.cpp" />
     <ClCompile Include="positionclass.cpp" />
     <ClCompile Include="shadermanagerclass.cpp" />
     <ClCompile Include="systemclass.cpp" />
@@ -61,6 +63,8 @@
     <None Include="bumpmap.ps" />
     <None Include="bumpmap.vs" />
     <None Include="ClassDiagram.cd" />
+    <None Include="cubemap.ps" />
+    <None Include="cubemap.vs" />
     <None Include="light.ps" />
     <None Include="light.vs" />
     <None Include="texture.ps" />

@@ -20,7 +20,7 @@ using namespace std;
 // MY CLASS INCLUDES //
 ///////////////////////
 #include "textureclass.h"
-#include "OBJLoader.h"
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class name: ModelClass
@@ -64,30 +64,13 @@ private:
 	void ReleaseTexture();
 
 	bool LoadModel(char*);
-
-	bool LoadOBJModel(const string& filename);
-
 	void ReleaseModel();
 
 private:
-	// DirectX Buffer
-	ID3D11Buffer *m_vertexBuffer, *m_indexBuffer;
+	ID3D11Buffer* m_vertexBuffer, * m_indexBuffer;
 	int m_vertexCount, m_indexCount;
-
-
 	TextureClass* m_Texture;
 	ModelType* m_model;
-
-	// OBJ Loader
-	vector<VertexType> m_vertices;
-	vector<unsigned int> m_indices;
-
-	// material OBJ
-	ID3D11ShaderResourceView* m_texture;
-	ID3D11ShaderResourceView* m_roughnessMap;
-	ID3D11ShaderResourceView* m_metallicMap;
-	ID3D11ShaderResourceView* m_normalMap;
-
 };
 
 #endif

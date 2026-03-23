@@ -49,7 +49,7 @@ private:
 	LPCWSTR m_applicationName;
 	HINSTANCE m_hinstance;
 	HWND m_hwnd;
-	
+
 	//ApplicationClass* m_Application;
 	InputClass* m_Input;
 	GraphicsClass* m_Graphics;

@@ -4,6 +4,9 @@
 #ifndef _GRAPHICSCLASS_H_
 #define _GRAPHICSCLASS_H_
 
+// Inlucdes //
+#include <vector>
+
 
 ///////////////////////
 // MY CLASS INCLUDES //
@@ -26,6 +29,34 @@ const bool FULL_SCREEN = true;
 const bool VSYNC_ENABLED = true;
 const float SCREEN_DEPTH = 1000.0f;
 const float SCREEN_NEAR = 0.1f;
+
+////////////////////////////////////////////////////////////////////////////////
+// Describes how a model is placed and rendered in the scene.
+////////////////////////////////////////////////////////////////////////////////
+enum class ShaderType // which shader to use when rendering a model
+{
+	Texture,
+	Light
+};
+
+struct SceneModel 
+{
+	ModelClass* model;
+	ShaderType  shaderType;
+	XMFLOAT3    position;
+	XMFLOAT3    scale;
+	float       rotationSpeed;  // radians per ms multiplier
+	XMFLOAT3    rotationAxis;   // which axis to rotate around (1,0,0) (0,1,0) (0,0,1)
+};
+
+struct SceneBumpModel 
+{
+	BumpModelClass* model;
+	XMFLOAT3        position;
+	XMFLOAT3        scale;
+	float            rotationSpeed;
+	XMFLOAT3        rotationAxis;
+};
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -56,10 +87,10 @@ private:
 	PositionClass* m_Position;
 	CameraClass* m_Camera;
 	LightClass* m_Light;
-	ModelClass* m_Model1;
-	ModelClass* m_Model2;
-	ModelClass* m_Model4;
-	BumpModelClass* m_Model3;
+	
+	// scene model
+	std::vector<SceneModel> m_SceneModels;
+	std::vector<SceneBumpModel> m_SceneBumpModels;
 };
 
 #endif
