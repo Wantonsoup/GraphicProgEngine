@@ -39,6 +39,11 @@ void LightClass::SetDirection(float x, float y, float z)
 	return;
 }
 
+void LightClass::SetPosition(float x, float y, float z)
+{
+	m_position = XMFLOAT3(x, y, z);
+	return;
+}
 
 void LightClass::SetSpecularColor(float red, float green, float blue, float alpha)
 {
@@ -50,6 +55,12 @@ void LightClass::SetSpecularColor(float red, float green, float blue, float alph
 void LightClass::SetSpecularPower(float power)
 {
 	m_specularPower = power;
+	return;
+}
+
+void LightClass::SetLookAt(float x, float y, float z)
+{
+	m_lookAt = XMFLOAT3(x, y, z);
 	return;
 }
 
@@ -71,6 +82,10 @@ XMFLOAT3 LightClass::GetDirection()
 	return m_direction;
 }
 
+XMFLOAT3 LightClass::GetPosition()
+{
+	return m_position;
+}
 
 XMFLOAT4 LightClass::GetSpecularColor()
 {
@@ -81,4 +96,53 @@ XMFLOAT4 LightClass::GetSpecularColor()
 float LightClass::GetSpecularPower()
 {
 	return m_specularPower;
+}
+
+void LightClass::GenerateViewMatrix()
+{
+	XMFLOAT3 up;
+	XMVECTOR positionVector, lookAtVector, upVector;
+
+	//Setup the vector that points upwards.
+	up.x = 0.0f;
+	up.y = 1.0f;
+	up.z = 0.0f;
+
+	// Load the XMFLOAT3 structures into XMVECTORs.
+	positionVector = XMLoadFloat3(&m_position);
+	lookAtVector = XMLoadFloat3(&m_lookAt);
+	upVector = XMLoadFloat3(&up);
+
+	// Create the view matrix from the three vectors.
+	m_viewMatrix = XMMatrixLookAtLH(positionVector, lookAtVector, upVector);
+
+	return;
+}
+
+void LightClass::GenerateProjectionMatrix(float, float)
+{
+	float fieldOfView, screenAspect;
+
+
+	// Setup field of view and screen aspect for a square light source.
+	fieldOfView = 3.14159265358979323846f / 2.0f;
+	screenAspect = 1.0f;
+
+	// Create the projection matrix for the light.
+	m_projectionMatrix = XMMatrixPerspectiveFovLH(fieldOfView, screenAspect, screenNear, screenDepth);
+
+	return;
+}
+
+void LightClass::GetViewMatrix(XMMATRIX & viewMatrix)
+{
+	viewMatrix = m_viewMatrix;
+	return;
+}
+
+
+void LightClass::GetProjectionMatrix(XMMATRIX & projectionMatrix)
+{
+	projectionMatrix = m_projectionMatrix;
+	return;
 }

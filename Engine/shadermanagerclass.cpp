@@ -10,6 +10,9 @@ ShaderManagerClass::ShaderManagerClass()
 	m_LightShader = 0;
 	m_BumpMapShader = 0;
 	m_CubeMapShader = 0;
+	m_PBRShader = 0;
+	m_ShadowShader = 0;
+	m_DepthShader = 0;
 }
 
 
@@ -88,12 +91,67 @@ bool ShaderManagerClass::Initialize(ID3D11Device* device, HWND hwnd)
 		return false;
 	}
 
+	// Create the PBR shader object.
+	m_PBRShader = new PBRShaderClass;
+	if(!m_PBRShader)
+	{
+		return false;
+	}
+
+	// Initialize the PBR shader object.
+	result = m_PBRShader->Initialize(device, hwnd);
+	if(!result)
+	{
+		MessageBox(hwnd, L"Could not initialize the PBR shader object.", L"Error", MB_OK);
+		return false;
+	}
+
+	// Create the shadow shader object.
+	m_ShadowShader = new ShadowShaderClass;
+	if (!m_ShadowShader)
+	{
+		return false;
+	}
+
+	// Initialize the shadow shader object.
+	result = m_ShadowShader->Initialize(device, hwnd);
+	if (!result)
+	{
+		MessageBox(hwnd, L"Could not initialize the shadow shader object.", L"Error", MB_OK);
+		return false;
+	}
+
+	// default bias value for shadow mapping (can be changed in the shader render function)
+	m_shadowMapBias = 0.005f;
+	
+	// Create the depth shader object.
+	m_DepthShader = new DepthShaderClass;
+	if (!m_DepthShader)
+	{
+		return false;
+	}
+
+	// Initialize the depth shader object.
+	result = m_DepthShader->Initialize(device, hwnd);
+	if (!result)
+	{
+		MessageBox(hwnd, L"Could not initialize the depth shader object.", L"Error", MB_OK);
+		return false;
+	}
 	return true;
 }
 
 
 void ShaderManagerClass::Shutdown()
 {
+	// Release the PBR shader object.
+	if(m_PBRShader)
+	{
+		m_PBRShader->Shutdown();
+		delete m_PBRShader;
+		m_PBRShader = 0;
+	}
+
 	// Release the bump map shader object.
 	if(m_BumpMapShader)
 	{
@@ -124,6 +182,22 @@ void ShaderManagerClass::Shutdown()
 		m_CubeMapShader->Shutdown();
 		delete m_CubeMapShader;
 		m_CubeMapShader = 0;
+	}
+
+	// Release the shadow shader object.
+	if (m_ShadowShader)
+	{
+		m_ShadowShader->Shutdown();
+		delete m_ShadowShader;
+		m_ShadowShader = 0;
+	}
+
+	// Release the depth shader object.
+	if (m_DepthShader)
+	{
+		m_DepthShader->Shutdown();
+		delete m_DepthShader;
+		m_DepthShader = 0;
 	}
 	return;
 }
@@ -190,6 +264,58 @@ bool ShaderManagerClass::RenderCubeMapShader(ID3D11DeviceContext* device, int in
 
 	// Render the model using the texture shader.
 	result = m_CubeMapShader->Render(device, indexCount, worldMatrix, viewMatrix, projectionMatrix, texture);
+	if (!result)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+
+bool ShaderManagerClass::RenderPBRShader(ID3D11DeviceContext* deviceContext, int indexCount, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix,
+	ID3D11ShaderResourceView* albedoTexture, ID3D11ShaderResourceView* normalMapTexture,
+	ID3D11ShaderResourceView* metallicTexture, ID3D11ShaderResourceView* roughnessTexture,
+	ID3D11ShaderResourceView* aoTexture,
+	XMFLOAT3 lightDirection, XMFLOAT4 lightColor, XMFLOAT3 cameraPosition, int debugMode)
+{
+	bool result;
+
+
+	// Render the model using the PBR shader.
+	result = m_PBRShader->Render(deviceContext, indexCount, worldMatrix, viewMatrix, projectionMatrix,
+								 albedoTexture, normalMapTexture, metallicTexture, roughnessTexture, aoTexture,
+								 lightDirection, lightColor, cameraPosition, debugMode);
+	if(!result)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool ShaderManagerClass::RenderShadowShader(ID3D11DeviceContext* deviceContext, int indexCount, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMMATRIX lightViewMatrix, 
+	XMMATRIX lightProjectionMatrix, ID3D11ShaderResourceView* texture, ID3D11ShaderResourceView* depthMap, XMFLOAT4 ambientColor, XMFLOAT4 diffuseColor, XMFLOAT3 lightPosition, float bias)
+{
+	bool result;
+
+	//Render the model using the shadow shader.
+	result = m_ShadowShader->Render(deviceContext, indexCount, worldMatrix, viewMatrix, projectionMatrix, lightViewMatrix, lightProjectionMatrix, 
+		texture, depthMap, ambientColor, diffuseColor, lightPosition, bias);
+	if(!result)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool ShaderManagerClass::RenderDepthShader(ID3D11DeviceContext* deviceContext, int indexCount, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix)
+{
+	bool result;
+
+	//Render the model using the shadow shader.
+	result = m_DepthShader->Render(deviceContext, indexCount, worldMatrix, viewMatrix, projectionMatrix);
 	if (!result)
 	{
 		return false;

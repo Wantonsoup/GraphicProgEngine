@@ -1,0 +1,208 @@
+////////////////////////////////////////////////////////////////////////////////
+// Filename: pbr.ps
+////////////////////////////////////////////////////////////////////////////////
+
+
+/////////////
+// GLOBALS //
+/////////////
+static const float PI = 3.14159265359f;
+
+Texture2D albedoTexture : register(t0);		// sends to texture
+Texture2D normalMapTexture : register(t1);
+Texture2D metallicTexture : register(t2);
+Texture2D roughnessTexture : register(t3);
+Texture2D aoTexture : register(t4);
+SamplerState SampleType;
+
+cbuffer LightBuffer : register(b0) // sends to buffer
+{
+	float4 lightColor;
+	float3 lightDirection;
+	float padding;
+};
+
+// Debug visualization modes:
+// 0 = Full PBR (default)
+// 1 = Albedo
+// 2 = Normal Map
+// 3 = Metallic
+// 4 = Roughness
+// 5 = AO
+cbuffer DebugBuffer : register(b1)
+{
+	int debugMode;
+	float3 debugPadding;
+};
+
+
+//////////////
+// TYPEDEFS //
+//////////////
+struct PixelInputType
+{
+	float4 position : SV_POSITION;
+	float2 tex : TEXCOORD0;
+	float3 normal : NORMAL;
+	float3 tangent : TANGENT;
+	float3 binormal : BINORMAL;
+	float3 worldPos : TEXCOORD1;
+	float3 viewDirection : TEXCOORD2;
+};
+
+
+////////////////////////////////////////////////////////////////////////////////
+// PBR Functions
+////////////////////////////////////////////////////////////////////////////////
+
+// Normal Distribution Function
+float D_GGX(float3 N, float3 H, float roughness)
+{
+	float a = roughness * roughness;
+	float a2 = a * a;
+	float NdotH = max(dot(N, H), 0.0);
+
+	float denom = (NdotH * NdotH * (a2 - 1.0) + 1.0);
+	return a2 / (PI * denom * denom);
+}
+
+// Geometry Function
+float G_Smith(float3 N, float3 V, float3 L, float roughness)
+{
+	float k = pow(roughness + 1.0, 2) / 8.0;
+
+	float NdotV = max(dot(N, V), 0.0);
+	float NdotL = max(dot(N, L), 0.0);
+
+	float g1 = NdotV / (NdotV * (1.0 - k) + k);
+	float g2 = NdotL / (NdotL * (1.0 - k) + k);
+
+	return g1 * g2;
+}
+
+// Fresnel Term 
+float3 F_Schlick(float cosTheta, float3 F0)
+{
+	return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Pixel Shader
+////////////////////////////////////////////////////////////////////////////////
+float4 PBRPixelShader(PixelInputType input) : SV_TARGET
+{
+	float3 albedo;
+	float metallic;
+	float roughness;
+	float ao;
+	float4 bumpMap;
+	float3 bumpNormal;
+	float3 N;
+	float3 V;
+	float3 L;
+	float3 H;
+	float3 F0;
+	float D;
+	float G;
+	float3 F;
+	float3 kD;
+	float3 diffuse;
+	float3 numerator;
+	float denominator;
+	float3 specular;
+	float NdotL;
+	float3 colour;
+	float3 ambient;
+
+
+	// PBR textures
+	albedo = pow(albedoTexture.Sample(SampleType, input.tex).rgb, 2.2); // sRGB to linear
+	metallic = metallicTexture.Sample(SampleType, input.tex).r;
+	roughness = roughnessTexture.Sample(SampleType, input.tex).r;
+	ao = aoTexture.Sample(SampleType, input.tex).r;
+
+	// Normal map and expand from (0, +1) to (-1, +1)
+	bumpMap = normalMapTexture.Sample(SampleType, input.tex);
+
+	// Debug visualization: output individual maps directly
+	if (debugMode == 1)
+	{
+		// Albedo 
+		return float4(albedoTexture.Sample(SampleType, input.tex).rgb, 1.0);
+	}
+	else if (debugMode == 2)
+	{
+		// Normal map
+		return float4(bumpMap.rgb, 1.0);
+	}
+	else if (debugMode == 3)
+	{
+		// Metallic 
+		return float4(metallic, metallic, metallic, 1.0);
+	}
+	else if (debugMode == 4)
+	{
+		// Roughness 
+		return float4(roughness, roughness, roughness, 1.0);
+	}
+	else if (debugMode == 5)
+	{
+		// AO 
+		return float4(ao, ao, ao, 1.0);
+	}
+
+	// Normal map expand from (0, +1) to (-1, +1).
+	bumpMap = (bumpMap * 2.0f) - 1.0f;
+
+	// Calculate the perturbed normal from the normal map data.
+	bumpNormal = input.normal + bumpMap.x * input.tangent + bumpMap.y * input.binormal;
+	bumpNormal = normalize(bumpNormal);
+
+	// Setup PBR vectors.
+	N = bumpNormal;
+	V = normalize(input.viewDirection);
+	L = normalize(-lightDirection);
+	H = normalize(V + L);
+
+	// Calculate base reflectivity (F0).
+	// used 0.04 for non-metals, and lerp to albedo for metals
+	F0 = float3(0.04, 0.04, 0.04);
+	F0 = lerp(F0, albedo, metallic);
+
+	// Normal Distribution Function
+	D = D_GGX(N, H, roughness);
+
+	// Geometry Function
+	G = G_Smith(N, V, L, roughness);
+
+	// Fresnel Term
+	F = F_Schlick(max(dot(H, V), 0.0), F0);
+
+	// Energy conservation
+	kD = (1.0 - F) * (1.0 - metallic);
+
+	// Diffuse component (Lambertian)
+	diffuse = albedo / PI;
+	diffuse *= kD;
+	
+	////////////////////////////////////////////////////////////
+	// Specular component (Cook-Torrance BRDF) (main formula) 
+	////////////////////////////////////////////////////////////
+	numerator = D * G * F;
+	denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
+	specular = numerator / max(denominator, 0.001);
+
+	// Final lighting calculation
+	NdotL = max(dot(N, L), 0.0);
+	colour = (diffuse + specular) * lightColor.rgb * NdotL;
+
+	// Ambient lighting approx
+	ambient = 0.03 * albedo * ao;
+
+	// Combine ambient and direct lighting
+	// Apply gamma correction (linear to sRGB)
+	colour = pow(ambient + colour, 1.0 / 2.2);
+
+	return float4(colour, 1.0);
+}

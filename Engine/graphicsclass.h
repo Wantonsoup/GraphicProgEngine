@@ -20,13 +20,14 @@
 #include "lightclass.h"
 #include "modelclass.h"
 #include "bumpmodelclass.h"
+#include "pbrmodelclass.h"
 #include "cubeskybox.h"
 
 
 /////////////
 // GLOBALS //
 /////////////
-const bool FULL_SCREEN = true;
+const bool FULL_SCREEN = false;
 const bool VSYNC_ENABLED = true;
 const float SCREEN_DEPTH = 1000.0f;
 const float SCREEN_NEAR = 0.1f;
@@ -37,7 +38,8 @@ const float SCREEN_NEAR = 0.1f;
 enum class ShaderType // which shader to use when rendering a model
 {
 	Texture,
-	Light
+	Light,
+
 };
 
 struct SceneModel 
@@ -59,6 +61,15 @@ struct SceneBumpModel
 	XMFLOAT3        rotationAxis;
 };
 
+struct ScenePBRModel
+{
+	PBRModelClass* model;
+	XMFLOAT3       position;
+	XMFLOAT3       scale;
+	float          rotationSpeed;
+	XMFLOAT3       rotationAxis;
+};
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class name: GraphicsClass
@@ -78,6 +89,7 @@ private:
 	//bool Render(float);
 	//Xu
 	bool HandleMovementInput(float);
+	bool RenderDepthToTexture();
 	bool Render();
 
 private:
@@ -93,6 +105,10 @@ private:
 	// scene model
 	std::vector<SceneModel> m_SceneModels;
 	std::vector<SceneBumpModel> m_SceneBumpModels;
+	std::vector<ScenePBRModel> m_ScenePBRModels;
+
+	// PBR debug visualization mode (0=Full PBR, 1=Albedo, 2=Normal, 3=Metallic, 4=Roughness, 5=AO)
+	int m_pbrDebugMode;
 };
 
 #endif

@@ -10,6 +10,7 @@ ModelClass::ModelClass()
 	m_indexBuffer = 0;
 	m_Texture = 0;
 	m_model = 0;
+	m_instanceCount = 0;
 }
 
 
@@ -82,6 +83,16 @@ int ModelClass::GetIndexCount()
 	return m_indexCount;
 }
 
+int ModelClass::GetInstanceCount()
+{
+	return 0;
+}
+
+
+bool ModelClass::SetInstance(ID3D11Device*, const std::vector<InstanceType>& instances)
+{
+	return false;
+}
 
 ID3D11ShaderResourceView* ModelClass::GetTexture()
 {

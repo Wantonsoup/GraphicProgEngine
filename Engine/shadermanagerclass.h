@@ -13,6 +13,9 @@
 #include "lightshaderclass.h"
 #include "bumpmapshaderclass.h"
 #include "cubemapshaderclass.h"
+#include "PBRShaderClass.h"
+#include "shadowshaderclass.h"
+#include "depthshaderclass.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Class name: ShaderManagerClass
@@ -37,11 +40,26 @@ public:
 
 	bool RenderCubeMapShader(ID3D11DeviceContext*, int, const XMMATRIX&, const XMMATRIX&, const XMMATRIX&, ID3D11ShaderResourceView*);
 
+	bool RenderPBRShader(ID3D11DeviceContext*, int, const XMMATRIX&, const XMMATRIX&, const XMMATRIX&,
+		ID3D11ShaderResourceView*, ID3D11ShaderResourceView*, ID3D11ShaderResourceView*,
+		ID3D11ShaderResourceView*, ID3D11ShaderResourceView*,
+		XMFLOAT3, XMFLOAT4, XMFLOAT3, int debugMode = 0);
+
+	bool RenderShadowShader(ID3D11DeviceContext*, int, XMMATRIX, XMMATRIX, XMMATRIX, XMMATRIX, XMMATRIX, ID3D11ShaderResourceView*, ID3D11ShaderResourceView*,
+		XMFLOAT4, XMFLOAT4, XMFLOAT3, float);
+
+	bool RenderDepthShader(ID3D11DeviceContext*, int, XMMATRIX, XMMATRIX, XMMATRIX);
 private:
 	TextureShaderClass* m_TextureShader;
 	LightShaderClass* m_LightShader;
 	BumpMapShaderClass* m_BumpMapShader;
 	CubeMapShaderClass* m_CubeMapShader;
+	PBRShaderClass* m_PBRShader;
+	ShadowShaderClass* m_ShadowShader;
+	DepthShaderClass* m_DepthShader;
+
+	float m_shadowMapBias
+
 };
 
 #endif

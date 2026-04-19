@@ -2,6 +2,7 @@
 // Filename: inputclass.cpp
 ////////////////////////////////////////////////////////////////////////////////
 #include "inputclass.h"
+#include <cstring>
 
 
 InputClass::InputClass()
@@ -36,6 +37,10 @@ bool InputClass::Initialize(HINSTANCE hinstance, HWND hwnd, int screenWidth, int
 	m_mouseY = 0;
 	oldMouseX = 0;
 	oldMouseY = 0;
+
+	// Initialize keyboard states.
+	memset(m_keyboardState, 0, sizeof(m_keyboardState));
+	memset(m_prevKeyboardState, 0, sizeof(m_prevKeyboardState));
 
 	// Initialize the main direct input interface.
 	result = DirectInput8Create(hinstance, DIRECTINPUT_VERSION, IID_IDirectInput8, (void**)&m_directInput, NULL);
@@ -137,6 +142,8 @@ bool InputClass::Frame()
 {
 	bool result;
 
+	// Save the previous keyboard state before reading the new one.
+	memcpy(m_prevKeyboardState, m_keyboardState, sizeof(m_keyboardState));
 
 	// Read the current state of the keyboard.
 	result = ReadKeyboard();
@@ -387,6 +394,18 @@ bool InputClass::IsPgDownPressed()
 {
 	// Do a bitwise and on the keyboard state to check if the key is currently being pressed.
 	if(m_keyboardState[DIK_PGDN] & 0x80)
+	{
+		return true;
+	}
+
+	return false;
+}
+
+
+bool InputClass::IsKeyPressed(unsigned char dikKey)
+{
+	// Returns true only on the frame the key transitions from up to down (single press, not held).
+	if ((m_keyboardState[dikKey] & 0x80) && !(m_prevKeyboardState[dikKey] & 0x80))
 	{
 		return true;
 	}

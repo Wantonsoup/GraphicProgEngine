@@ -57,6 +57,9 @@ public:
 	bool IsPgUpPressed();
 	bool IsPgDownPressed();
 
+	// PBR debug: returns true on the frame the key is first pressed (not held).
+	bool IsKeyPressed(unsigned char dikKey);
+
 private:
 	bool ReadKeyboard();
 	bool ReadMouse();
@@ -68,6 +71,7 @@ private:
 	IDirectInputDevice8* m_mouse;
 
 	unsigned char m_keyboardState[256];
+	unsigned char m_prevKeyboardState[256];
 	DIMOUSESTATE m_mouseState;
 
 	int m_screenWidth, m_screenHeight;

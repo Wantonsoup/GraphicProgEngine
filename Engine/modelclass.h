@@ -13,6 +13,7 @@
 using namespace DirectX;
 
 #include <fstream>
+#include <vector>
 using namespace std;
 
 
@@ -42,6 +43,13 @@ private:
 		float nx, ny, nz;
 	};
 
+	struct InstanceType
+	{
+		XMFLOAT3 position;
+		XMFLOAT3 rotation;
+		XMFLOAT3 scale;
+	};
+
 public:
 	ModelClass();
 	ModelClass(const ModelClass&);
@@ -52,6 +60,9 @@ public:
 	void Render(ID3D11DeviceContext*);
 
 	int GetIndexCount();
+	int GetInstanceCount();
+
+	bool SetInstance(ID3D11Device*, const std::vector<InstanceType>& instances);
 	ID3D11ShaderResourceView* GetTexture();
 
 
@@ -59,6 +70,7 @@ private:
 	bool InitializeBuffers(ID3D11Device*);
 	void ShutdownBuffers();
 	void RenderBuffers(ID3D11DeviceContext*);
+	
 
 	bool LoadTexture(ID3D11Device*, WCHAR*);
 	void ReleaseTexture();
@@ -69,6 +81,7 @@ private:
 private:
 	ID3D11Buffer* m_vertexBuffer, * m_indexBuffer;
 	int m_vertexCount, m_indexCount;
+	int m_instanceCount;
 	TextureClass* m_Texture;
 	ModelType* m_model;
 };

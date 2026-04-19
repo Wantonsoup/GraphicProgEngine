@@ -14,6 +14,7 @@ GraphicsClass::GraphicsClass()
 	m_Position = 0;
 	m_Camera = 0;
 	m_Skybox = 0;
+	m_pbrDebugMode = 0;
 }
 
 
@@ -171,7 +172,20 @@ bool GraphicsClass::Initialize(HINSTANCE hinstance, HWND hwnd, int screenWidth, 
 
 		// Model 4: iceland terrain (dessert texture)
 		{ "../Engine/data/iceland.txt",       L"../Engine/data/dessert2.dds",
-			  ShaderType::Texture, { 0.0f, -50.0f, 200.0f }, { 10.0f, 3.0f, 10.0f }, 0.0f, { 0.0f, 0.0f, 0.0f } },
+		ShaderType::Texture, 
+		{ 0.0f, -20.0f, 200.0f }, 
+		{ 10.0f, 3.0f, 10.0f }, 
+		0.0f, 
+		{ 0.0f, 0.0f, 0.0f } },
+
+		// model 5: land
+		{ "../Engine/data/cube.txt", L"../Engine/data/marble.dds",
+		ShaderType::Texture,
+		{ 0.0f, -5.0f, 0.0f },
+		{ 100.0f, 1.0f, 100.0f },
+		0.0f,
+		{ 0.0f, 1.0f, 0.0f }
+		}
 	};
 
 	for (auto& def : modelDefs) // loop to reduce duplication (easier to add more models in the future)
@@ -225,6 +239,44 @@ bool GraphicsClass::Initialize(HINSTANCE hinstance, HWND hwnd, int screenWidth, 
 	sbm.rotationAxis = { 1.0f, 0.0f, 0.0f };
 	m_SceneBumpModels.push_back(sbm);
 
+	// PBR models (separate pipeline) //
+	
+	PBRModelClass* pbrModel = new PBRModelClass;
+	if (!pbrModel)
+	{
+		return false;
+	}
+
+	// Initialize the PBR model object with 5 PBR textures.
+	// Must be in dds format to load with Directx11
+	
+	// tree
+	result = pbrModel->Initialize(m_D3D->GetDevice(), "../Engine/data/cube.txt",
+		L"../Engine/data/pbr/tree/albedo.dds",
+		L"../Engine/data/pbr/tree/normal.dds",
+		L"../Engine/data/pbr/tree/metallic.dds",
+		L"../Engine/data/pbr/tree/roughness.dds",
+		L"../Engine/data/pbr/tree/ao.dds");
+
+	if (!result)
+	{
+		MessageBox(hwnd, L"Could not initialize the PBR model object.", L"Error", MB_OK);
+		return false;
+	}
+
+	// Store PBR model and properties in a list (rendering each frame).
+	ScenePBRModel spm;
+	spm.model = pbrModel;
+	spm.position = { 7.0f, 0.0f, 0.0f };
+	spm.scale = { 1.0f, 1.0f, 1.0f };
+	spm.rotationSpeed = 0.5f;
+	spm.rotationAxis = { 0.0f, 1.0f, 0.0f };
+	m_ScenePBRModels.push_back(spm);
+
+
+	
+
+
 	return true;
 }
 
@@ -254,6 +306,18 @@ void GraphicsClass::Shutdown()
 		}
 	}
 	m_SceneBumpModels.clear();
+
+	// Release all PBR models.
+	for (auto& spm : m_ScenePBRModels)
+	{
+		if (spm.model)
+		{
+			spm.model->Shutdown();
+			delete spm.model;
+			spm.model = 0;
+		}
+	}
+	m_ScenePBRModels.clear();
 
 	// Release the light object.
 	if (m_Light)
@@ -339,6 +403,23 @@ bool GraphicsClass::Frame()
 		return false;
 	}
 
+	// PBR debug: press 1-6 to switch debug visualization mode.
+	// 1 = Full PBR, 2 = Albedo, 3 = Normal, 
+	// F4 = Metallic, 5 = Roughness, 6 = AO
+	if (m_Input->IsKeyPressed(DIK_1))
+		m_pbrDebugMode = 0;
+	else if (m_Input->IsKeyPressed(DIK_2))
+		m_pbrDebugMode = 1;
+	else if (m_Input->IsKeyPressed(DIK_3))
+		m_pbrDebugMode = 2;
+	else if (m_Input->IsKeyPressed(DIK_4))
+		m_pbrDebugMode = 3;
+	else if (m_Input->IsKeyPressed(DIK_5))
+		m_pbrDebugMode = 4;
+	else if (m_Input->IsKeyPressed(DIK_6))
+		m_pbrDebugMode = 5;
+
+
 	// Do the frame input processing.
 	result = HandleMovementInput(m_Timer->GetTime());
 	if (!result)
@@ -404,6 +485,37 @@ bool GraphicsClass::HandleMovementInput(float frameTime)
 	return true;
 }
 
+bool GraphicsClass::RenderDepthToTexture()
+{
+	XMMATRIX translateMatrix, lightViewMatrix, lightProjectionMatrix;
+	bool result;
+	
+	// Set the render target to be the render to texture.  Also clear the render to texture.
+	m_RenderTexture->SetRenderTarget(m_Direct3D->GetDeviceContext());
+	m_RenderTexture->ClearRenderTarget(m_Direct3D->GetDeviceContext(), 0.0f, 0.0f, 0.0f, 1.0f);
+	
+	// Get the view and orthographic matrices from the light object.
+	m_Light->GetViewMatrix(lightViewMatrix);
+	m_Light->GetProjectionMatrix(lightProjectionMatrix);
+	
+
+	// Setup the translation matrix for the cube model.
+	translateMatrix = XMMatrixTranslation(-2.0f, 2.0f, 0.0f);
+
+	// Setup the translation matrix for the sphere model.
+	translateMatrix = XMMatrixTranslation(2.0f, 2.0f, 0.0f);
+
+	// Setup the translation matrix for the ground model.
+	translateMatrix = XMMatrixTranslation(0.0f, 1.0f, 0.0f);
+
+	// Reset the render target back to the original back buffer and not the render to texture anymore.  Also reset the viewport back to the original.
+	m_Direct3D->SetBackBufferRenderTarget();
+	m_Direct3D->ResetViewport();
+
+	return true;
+}
+}
+
 bool GraphicsClass::Render()
 {
 	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
@@ -429,6 +541,13 @@ bool GraphicsClass::Render()
 
 	XMMATRIX skyboxViewMatrix = viewMatrix;
 	skyboxViewMatrix.r[3] = DirectX::XMVectorSet(0, 0, 0, 1); // Remove translation, we don't want to translate the cube based on the view matrix
+
+	// Render the scene depth to the render texture.
+	result = RenderDepthToTexture();
+	if (!result)
+	{
+		return false;
+	}
 
 
 	// Render the skybox
@@ -462,23 +581,27 @@ bool GraphicsClass::Render()
 		sm.model->Render(m_D3D->GetDeviceContext());
 
 		// Dispatch to the correct shader.
-		if (sm.shaderType == ShaderType::Texture)
+		switch (sm.shaderType)
 		{
-			result = m_ShaderManager->RenderTextureShader(m_D3D->GetDeviceContext(), sm.model->GetIndexCount(),
-				worldMatrix, viewMatrix, projectionMatrix, sm.model->GetTexture());
-		}
-		else // ShaderType::Light
-		{
-			result = m_ShaderManager->RenderLightShader(m_D3D->GetDeviceContext(), sm.model->GetIndexCount(),
-				worldMatrix, viewMatrix, projectionMatrix, sm.model->GetTexture(),
-				m_Light->GetDirection(), m_Light->GetAmbientColor(), m_Light->GetDiffuseColor(),
-				m_Camera->GetPosition(), m_Light->GetSpecularColor(), m_Light->GetSpecularPower());
+			case ShaderType::Texture:
+				result = m_ShaderManager->RenderTextureShader(m_D3D->GetDeviceContext(), sm.model->GetIndexCount(),
+						worldMatrix, viewMatrix, projectionMatrix, sm.model->GetTexture());
+				break;
+
+			case ShaderType::Light:
+				result = m_ShaderManager->RenderLightShader(m_D3D->GetDeviceContext(), sm.model->GetIndexCount(),
+					worldMatrix, viewMatrix, projectionMatrix, sm.model->GetTexture(),
+					m_Light->GetDirection(), m_Light->GetAmbientColor(), m_Light->GetDiffuseColor(),
+					m_Camera->GetPosition(), m_Light->GetSpecularColor(), m_Light->GetSpecularPower());
+				break;
+
+			default:
+				result = false; // Invalid shader type
+				break;
+
+
 		}
 
-		if (!result)
-		{
-			return false;
-		}
 	}
 
 
@@ -502,6 +625,37 @@ bool GraphicsClass::Render()
 			worldMatrix, viewMatrix, projectionMatrix,
 			sbm.model->GetColorTexture(), sbm.model->GetNormalMapTexture(),
 			m_Light->GetDirection(), m_Light->GetDiffuseColor());
+
+		if (!result)
+		{
+			return false;
+		}
+	}
+
+
+	// Render all PBR models.
+	for (auto& spm : m_ScenePBRModels)
+	{
+		XMMATRIX scaleMatrix = XMMatrixScaling(spm.scale.x, spm.scale.y, spm.scale.z);
+
+		XMMATRIX rotMatrix = XMMatrixIdentity();
+		if (spm.rotationSpeed != 0.0f)
+		{
+			float angle = rotation * spm.rotationSpeed;
+			rotMatrix = XMMatrixRotationAxis(XMLoadFloat3(&spm.rotationAxis), angle);
+		}
+
+		XMMATRIX transMatrix = XMMatrixTranslation(spm.position.x, spm.position.y, spm.position.z);
+		worldMatrix = XMMatrixMultiply(XMMatrixMultiply(scaleMatrix, rotMatrix), transMatrix);
+
+		spm.model->Render(m_D3D->GetDeviceContext());
+		result = m_ShaderManager->RenderPBRShader(m_D3D->GetDeviceContext(), spm.model->GetIndexCount(),
+			worldMatrix, viewMatrix, projectionMatrix,
+			spm.model->GetAlbedoTexture(), spm.model->GetNormalMapTexture(),
+			spm.model->GetMetallicTexture(), spm.model->GetRoughnessTexture(),
+			spm.model->GetAOTexture(),
+			m_Light->GetDirection(), m_Light->GetDiffuseColor(),
+			m_Camera->GetPosition(), m_pbrDebugMode);
 
 		if (!result)
 		{
