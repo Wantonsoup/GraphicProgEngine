@@ -106,24 +106,6 @@ bool ShaderManagerClass::Initialize(ID3D11Device* device, HWND hwnd)
 		return false;
 	}
 
-	// Create the shadow shader object.
-	m_ShadowShader = new ShadowShaderClass;
-	if (!m_ShadowShader)
-	{
-		return false;
-	}
-
-	// Initialize the shadow shader object.
-	result = m_ShadowShader->Initialize(device, hwnd);
-	if (!result)
-	{
-		MessageBox(hwnd, L"Could not initialize the shadow shader object.", L"Error", MB_OK);
-		return false;
-	}
-
-	// default bias value for shadow mapping (can be changed in the shader render function)
-	m_shadowMapBias = 0.005f;
-	
 	// Create the depth shader object.
 	m_DepthShader = new DepthShaderClass;
 	if (!m_DepthShader)
@@ -138,6 +120,23 @@ bool ShaderManagerClass::Initialize(ID3D11Device* device, HWND hwnd)
 		MessageBox(hwnd, L"Could not initialize the depth shader object.", L"Error", MB_OK);
 		return false;
 	}
+
+	// Create the shadow shader object.
+	m_ShadowShader = new ShadowShaderClass;
+	if (!m_ShadowShader)
+	{
+		return false;
+	}
+
+	// Initialize the shadow shader object.
+	result = m_ShadowShader->Initialize(device, hwnd);
+	if (!result)
+	{
+		MessageBox(hwnd, L"Could not initialize the shadow shader object.", L"Error", MB_OK);
+		return false;
+	}
+	
+	
 	return true;
 }
 

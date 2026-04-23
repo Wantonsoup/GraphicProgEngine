@@ -35,6 +35,7 @@
     <ClInclude Include="pbrmodelclass.h" />
     <ClInclude Include="PBRShaderClass.h" />
     <ClInclude Include="positionclass.h" />
+    <ClInclude Include="rendertextureclass.h" />
     <ClInclude Include="shadermanagerclass.h" />
     <ClInclude Include="shadowshaderclass.h" />
     <ClInclude Include="systemclass.h" />
@@ -60,6 +61,7 @@
     <ClCompile Include="pbrmodelclass.cpp" />
     <ClCompile Include="PBRShaderClass.cpp" />
     <ClCompile Include="positionclass.cpp" />
+    <ClCompile Include="rendertextureclass.cpp" />
     <ClCompile Include="shadermanagerclass.cpp" />
     <ClCompile Include="shadowshaderclass.cpp" />
     <ClCompile Include="systemclass.cpp" />

@@ -15,11 +15,9 @@ GraphicsClass::GraphicsClass()
 	m_Camera = 0;
 	m_Skybox = 0;
 	m_pbrDebugMode = 0;
-}
-
-
-GraphicsClass::GraphicsClass(const GraphicsClass& other)
-{
+	m_ShadowMap = 0;
+	m_LightModel = 0;
+	m_SpherePos = XMFLOAT3(0.0f, 5.0f, 0.0f);
 }
 
 
@@ -111,6 +109,7 @@ bool GraphicsClass::Initialize(HINSTANCE hinstance, HWND hwnd, int screenWidth, 
 	}
 
 	// Create the light object.
+	
 	m_Light = new LightClass;
 	if (!m_Light)
 	{
@@ -118,11 +117,19 @@ bool GraphicsClass::Initialize(HINSTANCE hinstance, HWND hwnd, int screenWidth, 
 	}
 
 	// Initialize the light object.
+	
 	m_Light->SetAmbientColor(0.15f, 0.15f, 0.15f, 1.0f);
 	m_Light->SetDiffuseColor(1.0f, 1.0f, 1.0f, 1.0f);
-	m_Light->SetDirection(0.0f, 0.0f, 1.0f);
 	m_Light->SetSpecularColor(1.0f, 1.0f, 1.0f, 1.0f);
 	m_Light->SetSpecularPower(64.0f);
+	/*
+	m_Light->SetDirection(0.0f, 0.0f, 1.0f); 
+	m_Light->SetLookAt(0.0f, 0.0f, 0.0f);
+	m_Light->GenerateProjectionMatrix(SCREEN_DEPTH, SCREEN_NEAR);
+	*/
+	
+	
+
 
 	// Create the skybox object.
 	m_Skybox = new CubeSkyBox;
@@ -139,7 +146,35 @@ bool GraphicsClass::Initialize(HINSTANCE hinstance, HWND hwnd, int screenWidth, 
 		return false;
 	}
 
+	// Create the shadow map object.
+	m_ShadowMap = new RenderTextureClass;
+	if(!m_ShadowMap)
+	{
+		return false;
+	}
+
+	//Initialize the shadow map object.
+	result = m_ShadowMap->Initialize(m_D3D->GetDevice(), screenWidth, screenHeight, SCREEN_DEPTH, SCREEN_NEAR, 1);
+	if(!result)
+	{
+		MessageBox(hwnd, L"Could not initialize the shadow map render texture.", L"Error", MB_OK);
+		return false;
+	}
+
+	// Create the light model object (for visualizing the light position in the scene).
+
+	m_LightModel = new ModelClass;
+	result = m_LightModel->Initialize(m_D3D->GetDevice(),
+		"../Engine/data/sphere.txt", L"../Engine/data/pbr/tree/roughness.dds");
+	if (!result)
+	{
+		MessageBox(hwnd, L"Could not initialize light model.", L"Error", MB_OK);
+		return false;
+	}
+
+	//////////////////////////////////////////////////////////////////////////////
 	// Define all scene models (stores as data rather then copy & paste blocks) //
+	//////////////////////////////////////////////////////////////////////////////
 	struct ModelDef
 	{
 		char* modelFile;
@@ -155,19 +190,19 @@ bool GraphicsClass::Initialize(HINSTANCE hinstance, HWND hwnd, int screenWidth, 
 	{
 		// Model 1: spinning cube (marble texture)
 		{ "../Engine/data/cube.txt",          L"../Engine/data/marble.dds",
-		ShaderType::Texture,
+		ShaderType::Shadow,
 		{ -3.5f, 0.0f, 0.0f }, // position
 		{ 1.0f, 1.0f, 1.0f }, // scale
-		3.0f,				// rotation speed
-		{ 0.0f, 0.0f, 1.0f } // rotation axis
+		0.0f,				// rotation speed
+		{ 1.0f, 0.0f, 0.0f } // rotation axis
 		},
 
 		// Model 2: ninja head (metal texture)
 		{ "../Engine/data/new-ninjaHead.txt", L"../Engine/data/metal.dds",
-		ShaderType::Light,
+		ShaderType::Shadow,
 		{ 0.0f, 0.0f, 0.0f },    // position
 		{ 0.03f, 0.03f, 0.03f }, // scale
-		1.0f,					 // rotation speed
+		0.0f,					 // rotation speed
 		{ 0.0f, 1.0f, 0.0f } }, // rotation axis
 
 		// Model 4: iceland terrain (dessert texture)
@@ -180,15 +215,18 @@ bool GraphicsClass::Initialize(HINSTANCE hinstance, HWND hwnd, int screenWidth, 
 
 		// model 5: land
 		{ "../Engine/data/cube.txt", L"../Engine/data/marble.dds",
-		ShaderType::Texture,
-		{ 0.0f, -5.0f, 0.0f },
-		{ 100.0f, 1.0f, 100.0f },
+		ShaderType::Shadow,
+		{ 0.0f, -3.0f, 0.0f },
+		{ 20.0f, 1.0f, 20.0f },
 		0.0f,
-		{ 0.0f, 1.0f, 0.0f }
-		}
+		{ 0.0f, 1.0f, 0.0f } },
+		
+
+		
 	};
 
-	for (auto& def : modelDefs) // loop to reduce duplication (easier to add more models in the future)
+	// loop to reduce duplication (easier to add more models in the future)
+	for (auto& def : modelDefs) 
 	{
 		ModelClass* model = new ModelClass;
 		if (!model)
@@ -214,32 +252,7 @@ bool GraphicsClass::Initialize(HINSTANCE hinstance, HWND hwnd, int screenWidth, 
 		m_SceneModels.push_back(sm);
 	}
 
-	// Bump-mapped models (separate pipeline) //
-	BumpModelClass* bumpModel = new BumpModelClass;
-	if (!bumpModel)
-	{
-		return false;
-	}
-	// Initialize the bump model object.
-	result = bumpModel->Initialize(m_D3D->GetDevice(), "../Engine/data/cube.txt",
-		L"../Engine/data/stone.dds", L"../Engine/data/normal.dds");
-
-	if (!result)
-	{
-		MessageBox(hwnd, L"Could not initialize the bump model object.", L"Error", MB_OK);
-		return false;
-	}
-
-	// store bump model and properties in a list (rendering each frame)
-	SceneBumpModel sbm;
-	sbm.model = bumpModel;
-	sbm.position = { 3.5f, 0.0f, 0.0f };
-	sbm.scale = { 1.0f, 1.0f, 1.0f };
-	sbm.rotationSpeed = 1.0f / 3.0f;
-	sbm.rotationAxis = { 1.0f, 0.0f, 0.0f };
-	m_SceneBumpModels.push_back(sbm);
-
-	// PBR models (separate pipeline) //
+	// PBR models //
 	
 	PBRModelClass* pbrModel = new PBRModelClass;
 	if (!pbrModel)
@@ -272,10 +285,6 @@ bool GraphicsClass::Initialize(HINSTANCE hinstance, HWND hwnd, int screenWidth, 
 	spm.rotationSpeed = 0.5f;
 	spm.rotationAxis = { 0.0f, 1.0f, 0.0f };
 	m_ScenePBRModels.push_back(spm);
-
-
-	
-
 
 	return true;
 }
@@ -379,6 +388,20 @@ void GraphicsClass::Shutdown()
 		m_Skybox = 0;
 	}
 
+	// Release the shadow map object.
+	if(m_ShadowMap)
+	{
+		m_ShadowMap->Shutdown();
+		delete m_ShadowMap;
+		m_ShadowMap = 0;
+	}
+
+	if (m_LightModel) 
+	{
+		m_LightModel->Shutdown(); 
+		delete m_LightModel; 
+		m_LightModel = 0; 
+	}
 	return;
 }
 
@@ -389,6 +412,7 @@ bool GraphicsClass::Frame()
 
 	// Update the system stats.
 	m_Timer->Frame();
+	float frameTime = m_Timer->GetTime();
 
 	// Read the user input.
 	result = m_Input->Frame();
@@ -402,6 +426,7 @@ bool GraphicsClass::Frame()
 	{
 		return false;
 	}
+
 
 	// PBR debug: press 1-6 to switch debug visualization mode.
 	// 1 = Full PBR, 2 = Albedo, 3 = Normal, 
@@ -427,11 +452,34 @@ bool GraphicsClass::Frame()
 		return false;
 	}
 
-	// Render the graphics.
+	
+	// Move the light position each frame to make the shadows visible.
+	// Update the position of the light each frame.
+	// Move sphere/light position however you like
+	static float angle = 0.0f;
+	angle += frameTime * 0.0005f;
+	m_SpherePos.x = sinf(angle) * 8.0f;
+	m_SpherePos.y = 5.0f;
+	m_SpherePos.z = cosf(angle) * 8.0f;
+
+	// Light follows the sphere exactly
+	m_Light->SetPosition(m_SpherePos.x, m_SpherePos.y, m_SpherePos.z);
+	m_Light->SetLookAt(0.0f, 0.0f, 0.0f);
+	m_Light->GenerateViewMatrix();
+	m_Light->GenerateOrthographicMatrix(-20.0f, 20.0f, SCREEN_NEAR, SCREEN_DEPTH);
+
+	// Pass 1: depth-only render from light POV
+	result = RenderDepthToTexture();
+	if (!result) 
+	{ 
+		return false; 
+	}
+
+	// Pass 2: full scene render with shadows
 	result = Render();
-	if (!result)
-	{
-		return false;
+	if (!result) 
+	{ 
+		return false; 
 	}
 
 	return true;
@@ -487,39 +535,58 @@ bool GraphicsClass::HandleMovementInput(float frameTime)
 
 bool GraphicsClass::RenderDepthToTexture()
 {
-	XMMATRIX translateMatrix, lightViewMatrix, lightProjectionMatrix;
+	XMMATRIX lightViewMatrix, lightProjectionMatrix;
 	bool result;
-	
-	// Set the render target to be the render to texture.  Also clear the render to texture.
-	m_RenderTexture->SetRenderTarget(m_Direct3D->GetDeviceContext());
-	m_RenderTexture->ClearRenderTarget(m_Direct3D->GetDeviceContext(), 0.0f, 0.0f, 0.0f, 1.0f);
-	
-	// Get the view and orthographic matrices from the light object.
+
+	static float rotation = 0.0f;
+	rotation += (float)XM_PI * 0.0005f * m_Timer->GetTime();
+
+	// Redirect rendering to the shadow map texture.
+	m_ShadowMap->SetRenderTarget(m_D3D->GetDeviceContext());
+	m_ShadowMap->ClearRenderTarget(m_D3D->GetDeviceContext(), 0.0f, 0.0f, 0.0f, 1.0f);
+
 	m_Light->GetViewMatrix(lightViewMatrix);
 	m_Light->GetProjectionMatrix(lightProjectionMatrix);
-	
 
-	// Setup the translation matrix for the cube model.
-	translateMatrix = XMMatrixTranslation(-2.0f, 2.0f, 0.0f);
+	// Render every Shadow type scene model into the depth map.
+	for (auto& sm : m_SceneModels)
+	{
+		if (sm.shaderType != ShaderType::Shadow) { continue; }
 
-	// Setup the translation matrix for the sphere model.
-	translateMatrix = XMMatrixTranslation(2.0f, 2.0f, 0.0f);
+		XMMATRIX scaleMatrix = XMMatrixScaling(sm.scale.x, sm.scale.y, sm.scale.z);
+		XMMATRIX rotMatrix = XMMatrixIdentity();
+		if (sm.rotationSpeed != 0.0f)
+		{
+			float angle = rotation * sm.rotationSpeed;
+			rotMatrix = XMMatrixRotationAxis(XMLoadFloat3(&sm.rotationAxis), angle);
+		}
+		XMMATRIX transMatrix = XMMatrixTranslation(sm.position.x, sm.position.y, sm.position.z);
+		XMMATRIX worldMatrix = XMMatrixMultiply(XMMatrixMultiply(scaleMatrix, rotMatrix), transMatrix);
 
-	// Setup the translation matrix for the ground model.
-	translateMatrix = XMMatrixTranslation(0.0f, 1.0f, 0.0f);
+		sm.model->Render(m_D3D->GetDeviceContext());
+		result = m_ShaderManager->RenderDepthShader(m_D3D->GetDeviceContext(),
+			sm.model->GetIndexCount(), worldMatrix, lightViewMatrix, lightProjectionMatrix);
+		if (!result) { return false; }
+	}
 
-	// Reset the render target back to the original back buffer and not the render to texture anymore.  Also reset the viewport back to the original.
-	m_Direct3D->SetBackBufferRenderTarget();
-	m_Direct3D->ResetViewport();
-
+	// Restore the back buffer as the render target.
+	ID3D11RenderTargetView* backBuffer = m_D3D->GetRenderTargetView();
+	ID3D11DepthStencilView* dsv = m_D3D->GetDepthStencilView();
+	m_D3D->SetBackBufferRenderTarget();
+	m_D3D->ResetViewport();
 	return true;
-}
 }
 
 bool GraphicsClass::Render()
 {
 	XMMATRIX worldMatrix, viewMatrix, projectionMatrix;
+	XMMATRIX lightViewMatrix, lightProjectionMatrix;
 	bool result;
+
+	worldMatrix = XMMatrixMultiply(
+		XMMatrixScaling(0.3f, 0.3f, 0.3f),
+		XMMatrixTranslation(m_SpherePos.x, m_SpherePos.y, m_SpherePos.z)
+	);
 
 	static float rotation = 0.0f;
 
@@ -536,21 +603,20 @@ bool GraphicsClass::Render()
 	m_Camera->GetViewMatrix(viewMatrix);
 	m_D3D->GetProjectionMatrix(projectionMatrix);
 
+	// Get the light's view and projection matrices.
+	m_Light->GetViewMatrix(lightViewMatrix);
+	m_Light->GetProjectionMatrix(lightProjectionMatrix);
+
 	//disable depth & render skybox
 	m_D3D->DisableDepth();
 
 	XMMATRIX skyboxViewMatrix = viewMatrix;
 	skyboxViewMatrix.r[3] = DirectX::XMVectorSet(0, 0, 0, 1); // Remove translation, we don't want to translate the cube based on the view matrix
 
-	// Render the scene depth to the render texture.
-	result = RenderDepthToTexture();
-	if (!result)
-	{
-		return false;
-	}
-
+	
 
 	// Render the skybox
+	m_D3D->GetWorldMatrix(worldMatrix);
 	m_Skybox->Render(m_D3D->GetDeviceContext());
 	result = m_ShaderManager->RenderCubeMapShader(m_D3D->GetDeviceContext(), m_Skybox->GetIndexCount(), worldMatrix, skyboxViewMatrix, projectionMatrix, m_Skybox->GetTexture());
 
@@ -561,12 +627,11 @@ bool GraphicsClass::Render()
 
 	m_D3D->EnableDepth();
 
-	// Render all models using the texture or light shader. 
+	// Render all models using the shader enum. 
 	for (auto& sm : m_SceneModels)
 	{
 		// Build the world matrix: Scale -> Rotate -> Translate.
 		XMMATRIX scaleMatrix = XMMatrixScaling(sm.scale.x, sm.scale.y, sm.scale.z);
-
 		XMMATRIX rotMatrix = XMMatrixIdentity(); 
 		if (sm.rotationSpeed != 0.0f)
 		{
@@ -594,7 +659,14 @@ bool GraphicsClass::Render()
 					m_Light->GetDirection(), m_Light->GetAmbientColor(), m_Light->GetDiffuseColor(),
 					m_Camera->GetPosition(), m_Light->GetSpecularColor(), m_Light->GetSpecularPower());
 				break;
-
+			case ShaderType::Shadow:
+				result = m_ShaderManager->RenderShadowShader(m_D3D->GetDeviceContext(),
+					sm.model->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix,
+					lightViewMatrix, lightProjectionMatrix,
+					sm.model->GetTexture(), m_ShadowMap->GetShaderResourceView(),
+					m_Light->GetAmbientColor(), m_Light->GetDiffuseColor(),
+					m_Light->GetPosition(), shadow_bias);
+				break;
 			default:
 				result = false; // Invalid shader type
 				break;
@@ -606,6 +678,7 @@ bool GraphicsClass::Render()
 
 
 	// Render all bump-mapped models.
+	/*
 	for (auto& sbm : m_SceneBumpModels)
 	{
 		XMMATRIX scaleMatrix = XMMatrixScaling(sbm.scale.x, sbm.scale.y, sbm.scale.z);
@@ -631,6 +704,7 @@ bool GraphicsClass::Render()
 			return false;
 		}
 	}
+	*/
 
 
 	// Render all PBR models.
@@ -662,6 +736,16 @@ bool GraphicsClass::Render()
 			return false;
 		}
 	}
+
+	XMFLOAT3 lightPos = m_Light->GetPosition();
+	worldMatrix = XMMatrixMultiply(
+		XMMatrixScaling(1.0f, 1.0f, 1.0f),
+		XMMatrixTranslation(lightPos.x, lightPos.y, lightPos.z)
+	);
+	m_LightModel->Render(m_D3D->GetDeviceContext());
+	m_ShaderManager->RenderTextureShader(m_D3D->GetDeviceContext(),
+		m_LightModel->GetIndexCount(), worldMatrix, viewMatrix, projectionMatrix,
+		m_LightModel->GetTexture());
 
 	// Present the rendered scene to the screen.
 	m_D3D->EndScene();

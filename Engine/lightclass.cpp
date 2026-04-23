@@ -119,7 +119,7 @@ void LightClass::GenerateViewMatrix()
 	return;
 }
 
-void LightClass::GenerateProjectionMatrix(float, float)
+void LightClass::GenerateProjectionMatrix(float screenDepth, float screenNear)
 {
 	float fieldOfView, screenAspect;
 
@@ -132,6 +132,11 @@ void LightClass::GenerateProjectionMatrix(float, float)
 	m_projectionMatrix = XMMatrixPerspectiveFovLH(fieldOfView, screenAspect, screenNear, screenDepth);
 
 	return;
+}
+
+void LightClass::GenerateOrthographicMatrix(float width, float height, float screenNear, float screenDepth)
+{
+	m_projectionMatrix = XMMatrixOrthographicLH(width, height, screenNear, screenDepth);
 }
 
 void LightClass::GetViewMatrix(XMMATRIX & viewMatrix)

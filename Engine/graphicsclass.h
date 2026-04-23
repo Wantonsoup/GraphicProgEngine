@@ -22,6 +22,7 @@
 #include "bumpmodelclass.h"
 #include "pbrmodelclass.h"
 #include "cubeskybox.h"
+#include "rendertextureclass.h";
 
 
 /////////////
@@ -30,7 +31,12 @@
 const bool FULL_SCREEN = false;
 const bool VSYNC_ENABLED = true;
 const float SCREEN_DEPTH = 1000.0f;
-const float SCREEN_NEAR = 0.1f;
+const float SCREEN_NEAR = 0.1f; // increase near plane to reduce shadow acne
+
+
+// Shadow map depth bias — tweak if you see shadow acne or peter-panning.
+const float shadow_bias = 0.001f;
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Describes how a model is placed and rendered in the scene.
@@ -39,7 +45,7 @@ enum class ShaderType // which shader to use when rendering a model
 {
 	Texture,
 	Light,
-
+	Shadow,
 };
 
 struct SceneModel 
@@ -89,9 +95,11 @@ private:
 	//bool Render(float);
 	//Xu
 	bool HandleMovementInput(float);
-	bool RenderDepthToTexture();
-	bool Render();
 
+	bool RenderDepthToTexture(); // pass 1: built shadow map
+	bool Render(); // pass 2: render scene
+
+	
 private:
 	InputClass* m_Input;
 	D3DClass* m_D3D;
@@ -101,6 +109,9 @@ private:
 	CameraClass* m_Camera;
 	LightClass* m_Light;
 	CubeSkyBox* m_Skybox;
+	ModelClass* m_LightModel;
+	// Shadow map render target
+	RenderTextureClass* m_ShadowMap;
 
 	// scene model
 	std::vector<SceneModel> m_SceneModels;
@@ -109,6 +120,9 @@ private:
 
 	// PBR debug visualization mode (0=Full PBR, 1=Albedo, 2=Normal, 3=Metallic, 4=Roughness, 5=AO)
 	int m_pbrDebugMode;
+
+	// Sphere position
+	XMFLOAT3 m_SpherePos;
 };
 
 #endif

@@ -41,9 +41,10 @@ public:
 	
 	void GenerateViewMatrix();
 	void GenerateProjectionMatrix(float, float);
-
+	void GenerateOrthographicMatrix(float, float, float, float);
 	void GetViewMatrix(XMMATRIX&);
 	void GetProjectionMatrix(XMMATRIX&);
+	
 private:
 	XMFLOAT4  m_ambientColor;
 	XMFLOAT4  m_diffuseColor;

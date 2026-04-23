@@ -42,6 +42,11 @@ public:
 
 	ID3D11Device* GetDevice();
 	ID3D11DeviceContext* GetDeviceContext();
+	ID3D11RenderTargetView* GetRenderTargetView();
+	ID3D11DepthStencilView* GetDepthStencilView();
+
+	void SetBackBufferRenderTarget();
+	void ResetViewport();
 
 	void GetProjectionMatrix(XMMATRIX&);
 	void GetWorldMatrix(XMMATRIX&);
@@ -65,6 +70,7 @@ private:
 	ID3D11DepthStencilState* m_depthStencilDisabledState;
 	ID3D11DepthStencilView* m_depthStencilView;
 	ID3D11RasterizerState* m_rasterState;
+	D3D11_VIEWPORT m_viewport;
 
 	XMMATRIX m_projectionMatrix;
 	XMMATRIX m_worldMatrix;

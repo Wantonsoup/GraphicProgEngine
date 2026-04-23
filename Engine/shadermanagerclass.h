@@ -49,6 +49,8 @@ public:
 		XMFLOAT4, XMFLOAT4, XMFLOAT3, float);
 
 	bool RenderDepthShader(ID3D11DeviceContext*, int, XMMATRIX, XMMATRIX, XMMATRIX);
+
+	
 private:
 	TextureShaderClass* m_TextureShader;
 	LightShaderClass* m_LightShader;
@@ -58,7 +60,7 @@ private:
 	ShadowShaderClass* m_ShadowShader;
 	DepthShaderClass* m_DepthShader;
 
-	float m_shadowMapBias
+	
 
 };
 
