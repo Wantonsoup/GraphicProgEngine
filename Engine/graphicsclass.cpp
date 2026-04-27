@@ -189,7 +189,7 @@ bool GraphicsClass::Initialize(HINSTANCE hinstance, HWND hwnd, int screenWidth, 
 	ModelDef modelDefs[] =
 	{
 		// Model 1: spinning cube (marble texture)
-		{ "../Engine/data/cube.txt",          L"../Engine/data/marble.dds",
+		{ "../Engine/data/tree.obj",          L"../Engine/data/marble.dds",
 		ShaderType::Shadow,
 		{ -3.5f, 0.0f, 0.0f }, // position
 		{ 1.0f, 1.0f, 1.0f }, // scale
@@ -728,6 +728,8 @@ bool GraphicsClass::Render()
 			spm.model->GetAlbedoTexture(), spm.model->GetNormalMapTexture(),
 			spm.model->GetMetallicTexture(), spm.model->GetRoughnessTexture(),
 			spm.model->GetAOTexture(),
+			m_ShadowMap->GetShaderResourceView(),
+			lightViewMatrix, lightProjectionMatrix,
 			m_Light->GetDirection(), m_Light->GetDiffuseColor(),
 			m_Camera->GetPosition(), m_pbrDebugMode);
 

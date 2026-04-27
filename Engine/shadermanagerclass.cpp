@@ -276,6 +276,8 @@ bool ShaderManagerClass::RenderPBRShader(ID3D11DeviceContext* deviceContext, int
 	ID3D11ShaderResourceView* albedoTexture, ID3D11ShaderResourceView* normalMapTexture,
 	ID3D11ShaderResourceView* metallicTexture, ID3D11ShaderResourceView* roughnessTexture,
 	ID3D11ShaderResourceView* aoTexture,
+	ID3D11ShaderResourceView* shadowTexture,
+	const XMMATRIX& lightViewMatrix, const XMMATRIX& lightProjectionMatrix,
 	XMFLOAT3 lightDirection, XMFLOAT4 lightColor, XMFLOAT3 cameraPosition, int debugMode)
 {
 	bool result;
@@ -283,8 +285,10 @@ bool ShaderManagerClass::RenderPBRShader(ID3D11DeviceContext* deviceContext, int
 
 	// Render the model using the PBR shader.
 	result = m_PBRShader->Render(deviceContext, indexCount, worldMatrix, viewMatrix, projectionMatrix,
-								 albedoTexture, normalMapTexture, metallicTexture, roughnessTexture, aoTexture,
-								 lightDirection, lightColor, cameraPosition, debugMode);
+								albedoTexture, normalMapTexture, metallicTexture, roughnessTexture, aoTexture,
+								shadowTexture,	
+								lightViewMatrix, lightProjectionMatrix,
+								lightDirection, lightColor, cameraPosition, debugMode);
 	if(!result)
 	{
 		return false;

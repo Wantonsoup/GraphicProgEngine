@@ -13,13 +13,21 @@ Texture2D normalMapTexture : register(t1);
 Texture2D metallicTexture : register(t2);
 Texture2D roughnessTexture : register(t3);
 Texture2D aoTexture : register(t4);
-SamplerState SampleType;
+Texture2D shadowMapTexture : register(t5);  // after your 5 PBR textures
+SamplerState ShadowSampler : register(s1);
+SamplerState SampleType : register(s0);
 
 cbuffer LightBuffer : register(b0) // sends to buffer
 {
 	float4 lightColor;
 	float3 lightDirection;
-	float padding;
+	float lightPadding;
+};
+
+cbuffer LightMatrixBuffer : register(b2)
+{
+	 float shadowBias;
+	 float3 shadowPadding;
 };
 
 // Debug visualization modes:
@@ -48,6 +56,7 @@ struct PixelInputType
 	float3 binormal : BINORMAL;
 	float3 worldPos : TEXCOORD1;
 	float3 viewDirection : TEXCOORD2;
+	float4 lightViewPos : TEXCOORD3;
 };
 
 
@@ -86,6 +95,26 @@ float3 F_Schlick(float cosTheta, float3 F0)
 	return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
+// Shadow calculation using PCF (Percentage Closer Filtering)
+float SampleShadow(float4 lightViewPos)
+{
+    float2 projCoord;
+    projCoord.x =  lightViewPos.x / lightViewPos.w / 2.0f + 0.5f;
+    projCoord.y = -lightViewPos.y / lightViewPos.w / 2.0f + 0.5f;
+
+    // Outside light frustum = fully lit
+    if (saturate(projCoord.x) != projCoord.x ||
+        saturate(projCoord.y) != projCoord.y)
+    {
+        return 1.0f;
+    }
+
+    float shadowDepth = shadowMapTexture.Sample(ShadowSampler, projCoord).r;
+    float lightDepth  = lightViewPos.z / lightViewPos.w - shadowBias;
+
+    return (lightDepth < shadowDepth) ? 1.0f : 0.0f;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Pixel Shader
@@ -114,6 +143,8 @@ float4 PBRPixelShader(PixelInputType input) : SV_TARGET
 	float NdotL;
 	float3 colour;
 	float3 ambient;
+	
+	float shadow;
 
 
 	// PBR textures
@@ -193,15 +224,14 @@ float4 PBRPixelShader(PixelInputType input) : SV_TARGET
 	denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
 	specular = numerator / max(denominator, 0.001);
 
-	// Final lighting calculation
+	// Shadow calculation: sample the shadow map using the light's view position
 	NdotL = max(dot(N, L), 0.0);
+	shadow = SampleShadow(input.lightViewPos);
+	NdotL = NdotL * shadow;
+
+	// Then the rest stays the same:
 	colour = (diffuse + specular) * lightColor.rgb * NdotL;
-
-	// Ambient lighting approx
 	ambient = 0.03 * albedo * ao;
-
-	// Combine ambient and direct lighting
-	// Apply gamma correction (linear to sRGB)
 	colour = pow(ambient + colour, 1.0 / 2.2);
 
 	return float4(colour, 1.0);

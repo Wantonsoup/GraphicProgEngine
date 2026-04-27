@@ -17,7 +17,7 @@ cbuffer MatrixBuffer : register(b0)
 cbuffer CameraBuffer : register(b1)
 {
 	float3 cameraPosition;
-	float padding;
+	float cameraPadding;
 };
 
 
@@ -33,6 +33,14 @@ struct VertexInputType
 	float3 binormal : BINORMAL;
 };
 
+cbuffer LightMatrixBuffer : register(b2)
+{
+    matrix lightViewMatrix;
+    matrix lightProjectionMatrix;
+    float shadowBias;
+    float3 padding;
+};
+
 struct PixelInputType
 {
     float4 position : SV_POSITION;
@@ -42,8 +50,9 @@ struct PixelInputType
 	float3 binormal : BINORMAL;
     float3 worldPos : TEXCOORD1;
     float3 viewDirection : TEXCOORD2;
-};
+    float4 lightViewPos : TEXCOORD3;
 
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 // Vertex Shader
@@ -51,7 +60,6 @@ struct PixelInputType
 PixelInputType PBRVertexShader(VertexInputType input)
 {
     PixelInputType output;
-
 
 	// Change the position vector to be 4 units for proper matrix calculations.
     input.position.w = 1.0f;
@@ -83,6 +91,10 @@ PixelInputType PBRVertexShader(VertexInputType input)
 
 	// Calculate the view direction from the world position to the camera.
 	output.viewDirection = normalize(cameraPosition - worldPosition.xyz);
+
+    // Calculate the position of the vertex against the light view and projection matrices for shadow mapping.
+    output.lightViewPos = mul(float4(worldPosition.xyz, 1.0f), lightViewMatrix);
+    output.lightViewPos = mul(output.lightViewPos, lightProjectionMatrix);
 
     return output;
 }

@@ -3,6 +3,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 #ifndef _MODELCLASS_H_
 #define _MODELCLASS_H_
+#define TINYOBJLOADER_IMPLEMENTATION
 
 
 //////////////
@@ -15,6 +16,12 @@ using namespace DirectX;
 #include <fstream>
 #include <vector>
 using namespace std;
+
+
+#include "tiny_obj_loader.h"
+#include <sstream>
+#include <unordered_map>
+#include <string>
 
 
 ///////////////////////
@@ -48,7 +55,9 @@ private:
 		XMFLOAT3 position;
 		XMFLOAT3 rotation;
 		XMFLOAT3 scale;
+		XMMATRIX world;
 	};
+
 
 public:
 	ModelClass();
@@ -78,12 +87,19 @@ private:
 	bool LoadModel(char*);
 	void ReleaseModel();
 
+	bool LoadObjModel(ID3D11Device*,char*, WCHAR*);
+
+
 private:
 	ID3D11Buffer* m_vertexBuffer, * m_indexBuffer;
 	int m_vertexCount, m_indexCount;
 	int m_instanceCount;
 	TextureClass* m_Texture;
 	ModelType* m_model;
+
+	// gpu instancing
+	ID3D11Buffer* m_instanceBuffer;
+	
 };
 
 #endif

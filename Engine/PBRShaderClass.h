@@ -55,6 +55,16 @@ private:
 		XMFLOAT3 padding;
 	};
 
+	struct LightMatrixBufferType
+	{
+		XMMATRIX lightView;
+		XMMATRIX lightProjection;
+		float shadowBias;
+		XMFLOAT3 shadowPadding;
+	};
+
+	ID3D11Buffer* m_lightMatrixBuffer;
+
 public:
 	PBRShaderClass();
 	PBRShaderClass(const PBRShaderClass&);
@@ -63,7 +73,10 @@ public:
 	bool Initialize(ID3D11Device*, HWND);
 	void Shutdown();
 	bool Render(ID3D11DeviceContext*, int, const XMMATRIX&, const XMMATRIX&, const XMMATRIX&,
-		ID3D11ShaderResourceView*, ID3D11ShaderResourceView*, ID3D11ShaderResourceView*, ID3D11ShaderResourceView*, ID3D11ShaderResourceView*,
+		ID3D11ShaderResourceView*, ID3D11ShaderResourceView*, ID3D11ShaderResourceView*,
+		ID3D11ShaderResourceView*, ID3D11ShaderResourceView*, 
+		ID3D11ShaderResourceView*,
+		const XMMATRIX&, const XMMATRIX&,
 		XMFLOAT3, XMFLOAT4, XMFLOAT3, int debugMode = 0);
 
 private:
@@ -72,7 +85,10 @@ private:
 	void OutputShaderErrorMessage(ID3D10Blob*, HWND, WCHAR*);
 
 	bool SetShaderParameters(ID3D11DeviceContext*, const XMMATRIX&, const XMMATRIX&, const XMMATRIX&,
-		ID3D11ShaderResourceView*, ID3D11ShaderResourceView*, ID3D11ShaderResourceView*, ID3D11ShaderResourceView*, ID3D11ShaderResourceView*,
+		ID3D11ShaderResourceView*, ID3D11ShaderResourceView*, ID3D11ShaderResourceView*,
+		ID3D11ShaderResourceView*, ID3D11ShaderResourceView*, 
+		ID3D11ShaderResourceView*,
+		const XMMATRIX&, const XMMATRIX&,
 		XMFLOAT3, XMFLOAT4, XMFLOAT3, int debugMode);
 	void RenderShader(ID3D11DeviceContext*, int);
 
@@ -85,6 +101,7 @@ private:
 	ID3D11Buffer* m_lightBuffer;
 	ID3D11Buffer* m_debugBuffer;
 	ID3D11SamplerState* m_sampleState;
+	ID3D11SamplerState* m_shadowSampleState;
 };
 
 #endif

@@ -15,6 +15,8 @@ PBRShaderClass::PBRShaderClass()
 	m_lightBuffer = 0;
 	m_debugBuffer = 0;
 	m_sampleState = 0;
+	m_shadowSampleState = 0;
+	m_lightMatrixBuffer = 0;
 }
 
 
@@ -55,7 +57,8 @@ void PBRShaderClass::Shutdown()
 
 bool PBRShaderClass::Render(ID3D11DeviceContext* deviceContext, int indexCount, const XMMATRIX& worldMatrix, const XMMATRIX& viewMatrix,
 	const XMMATRIX& projectionMatrix, ID3D11ShaderResourceView* albedoTexture, ID3D11ShaderResourceView* normalMapTexture,
-	ID3D11ShaderResourceView* metallicTexture, ID3D11ShaderResourceView* roughnessTexture, ID3D11ShaderResourceView* aoTexture,
+	ID3D11ShaderResourceView* metallicTexture, ID3D11ShaderResourceView* roughnessTexture, ID3D11ShaderResourceView* aoTexture, ID3D11ShaderResourceView* shadowTexture,
+	const XMMATRIX& lightViewMatrix, const XMMATRIX& lightProjectionMatrix,
 	XMFLOAT3 lightDirection, XMFLOAT4 lightColor, XMFLOAT3 cameraPosition, int debugMode)
 {
 	bool result;
@@ -63,7 +66,7 @@ bool PBRShaderClass::Render(ID3D11DeviceContext* deviceContext, int indexCount, 
 
 	// Set the shader parameters that it will use for rendering.
 	result = SetShaderParameters(deviceContext, worldMatrix, viewMatrix, projectionMatrix, albedoTexture, normalMapTexture,
-		metallicTexture, roughnessTexture, aoTexture, lightDirection, lightColor, cameraPosition, debugMode);
+		metallicTexture, roughnessTexture, aoTexture, shadowTexture, lightViewMatrix, lightProjectionMatrix, lightDirection, lightColor, cameraPosition, debugMode);
 	if (!result)
 	{
 		return false;
@@ -88,6 +91,7 @@ bool PBRShaderClass::InitializeShader(ID3D11Device* device, HWND hwnd, WCHAR* vs
 	D3D11_BUFFER_DESC cameraBufferDesc;
 	D3D11_BUFFER_DESC lightBufferDesc;
 	D3D11_BUFFER_DESC debugBufferDesc;
+	D3D11_BUFFER_DESC lightMatrixBufferDesc;
 	D3D11_SAMPLER_DESC samplerDesc;
 
 
@@ -294,6 +298,37 @@ bool PBRShaderClass::InitializeShader(ID3D11Device* device, HWND hwnd, WCHAR* vs
 		return false;
 	}
 
+
+
+	lightMatrixBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	lightMatrixBufferDesc.ByteWidth = sizeof(LightMatrixBufferType);
+	lightMatrixBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	lightMatrixBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	lightMatrixBufferDesc.MiscFlags = 0;
+	lightMatrixBufferDesc.StructureByteStride = 0;
+
+	result = device->CreateBuffer(&lightMatrixBufferDesc, NULL, &m_lightMatrixBuffer);
+	if (FAILED(result)) { return false; }
+
+	D3D11_SAMPLER_DESC shadowSamplerDesc;
+	shadowSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	shadowSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	shadowSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	shadowSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	shadowSamplerDesc.MipLODBias = 0.0f;
+	shadowSamplerDesc.MaxAnisotropy = 1;
+	shadowSamplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+	shadowSamplerDesc.BorderColor[0] = 0;
+	shadowSamplerDesc.BorderColor[1] = 0;
+	shadowSamplerDesc.BorderColor[2] = 0;
+	shadowSamplerDesc.BorderColor[3] = 0;
+	shadowSamplerDesc.MinLOD = 0;
+	shadowSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	result = device->CreateSamplerState(&shadowSamplerDesc, &m_shadowSampleState);
+	if (FAILED(result)) { return false; }
+
+
 	return true;
 }
 
@@ -356,6 +391,12 @@ void PBRShaderClass::ShutdownShader()
 		m_vertexShader = 0;
 	}
 
+	//Release the light matrix constant buffer.
+	if (m_lightMatrixBuffer)
+	{
+		m_lightMatrixBuffer->Release();
+		m_lightMatrixBuffer = 0;
+	}
 	return;
 }
 
@@ -370,6 +411,7 @@ void PBRShaderClass::OutputShaderErrorMessage(ID3D10Blob* errorMessage, HWND hwn
 	// Get a pointer to the error message text buffer.
 	compileErrors = (char*)(errorMessage->GetBufferPointer());
 
+	// Get the length of the message.
 	// Get the length of the message.
 	bufferSize = errorMessage->GetBufferSize();
 
@@ -401,6 +443,8 @@ bool PBRShaderClass::SetShaderParameters(ID3D11DeviceContext* deviceContext, con
 	ID3D11ShaderResourceView* albedoTexture, ID3D11ShaderResourceView* normalMapTexture,
 	ID3D11ShaderResourceView* metallicTexture, ID3D11ShaderResourceView* roughnessTexture,
 	ID3D11ShaderResourceView* aoTexture,
+	ID3D11ShaderResourceView* shadowTexture,
+	const XMMATRIX& lightViewMatrix, const XMMATRIX& lightProjectionMatrix,
 	XMFLOAT3 lightDirection, XMFLOAT4 lightColor, XMFLOAT3 cameraPosition, int debugMode)
 {
 	HRESULT result;
@@ -409,6 +453,7 @@ bool PBRShaderClass::SetShaderParameters(ID3D11DeviceContext* deviceContext, con
 	CameraBufferType* dataPtr2;
 	LightBufferType* dataPtr3;
 	DebugBufferType* dataPtr4;
+	LightMatrixBufferType* dataPtr5;
 	unsigned int bufferNumber;
 
 
@@ -466,6 +511,7 @@ bool PBRShaderClass::SetShaderParameters(ID3D11DeviceContext* deviceContext, con
 	deviceContext->PSSetShaderResources(3, 1, &roughnessTexture);
 	deviceContext->PSSetShaderResources(4, 1, &aoTexture);
 
+	deviceContext->PSSetShaderResources(5, 1, &shadowTexture);
 	// Lock the light constant buffer so it can be written to.
 	result = deviceContext->Map(m_lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	if (FAILED(result))
@@ -510,6 +556,22 @@ bool PBRShaderClass::SetShaderParameters(ID3D11DeviceContext* deviceContext, con
 	// Set the debug constant buffer in the pixel shader at slot b1.
 	bufferNumber = 1;
 	deviceContext->PSSetConstantBuffers(bufferNumber, 1, &m_debugBuffer);
+
+	
+
+	result = deviceContext->Map(m_lightMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	if (FAILED(result)) { return false; }
+
+	dataPtr5 = (LightMatrixBufferType*)mappedResource.pData;
+	dataPtr5->lightView = XMMatrixTranspose(lightViewMatrix);
+	dataPtr5->lightProjection = XMMatrixTranspose(lightProjectionMatrix);
+	dataPtr5->shadowBias = 0.0022f;
+	dataPtr5->shadowPadding = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+	deviceContext->Unmap(m_lightMatrixBuffer, 0);
+
+	deviceContext->VSSetConstantBuffers(2, 1, &m_lightMatrixBuffer);
+	deviceContext->PSSetConstantBuffers(2, 1, &m_lightMatrixBuffer);
 
 	return true;
 }

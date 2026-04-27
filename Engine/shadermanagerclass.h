@@ -43,6 +43,8 @@ public:
 	bool RenderPBRShader(ID3D11DeviceContext*, int, const XMMATRIX&, const XMMATRIX&, const XMMATRIX&,
 		ID3D11ShaderResourceView*, ID3D11ShaderResourceView*, ID3D11ShaderResourceView*,
 		ID3D11ShaderResourceView*, ID3D11ShaderResourceView*,
+		ID3D11ShaderResourceView*,
+		const XMMATRIX&, const XMMATRIX&,
 		XMFLOAT3, XMFLOAT4, XMFLOAT3, int debugMode = 0);
 
 	bool RenderShadowShader(ID3D11DeviceContext*, int, XMMATRIX, XMMATRIX, XMMATRIX, XMMATRIX, XMMATRIX, ID3D11ShaderResourceView*, ID3D11ShaderResourceView*,
