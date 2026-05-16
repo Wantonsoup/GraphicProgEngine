@@ -30,9 +30,9 @@ public:
 	bool Initialize(ID3D11Device*, HWND);
 	void Shutdown();
 
-	bool RenderTextureShader(ID3D11DeviceContext*, int, const XMMATRIX&, const XMMATRIX&, const XMMATRIX&, ID3D11ShaderResourceView*);
+	bool RenderTextureShader(ID3D11DeviceContext*, int, int, const XMMATRIX&, const XMMATRIX&, const XMMATRIX&, ID3D11ShaderResourceView*);
 
-	bool RenderLightShader(ID3D11DeviceContext*, int, const XMMATRIX&, const XMMATRIX&, const XMMATRIX&, ID3D11ShaderResourceView*,
+	bool RenderLightShader(ID3D11DeviceContext*, int, int, const XMMATRIX&, const XMMATRIX&, const XMMATRIX&, ID3D11ShaderResourceView*,
 		XMFLOAT3, XMFLOAT4, XMFLOAT4, XMFLOAT3, XMFLOAT4, float);
 
 	bool RenderBumpMapShader(ID3D11DeviceContext*, int, const XMMATRIX&, const XMMATRIX&, const XMMATRIX&, ID3D11ShaderResourceView*,
@@ -47,12 +47,15 @@ public:
 		const XMMATRIX&, const XMMATRIX&,
 		XMFLOAT3, XMFLOAT4, XMFLOAT3, int debugMode = 0);
 
+	bool RenderPBRShaderInstanced(ID3D11DeviceContext*,int,int,XMMATRIX,XMMATRIX,XMMATRIX,ID3D11ShaderResourceView*,ID3D11ShaderResourceView*,ID3D11ShaderResourceView*,ID3D11ShaderResourceView*,ID3D11ShaderResourceView*,ID3D11ShaderResourceView*,XMMATRIX,XMMATRIX,XMFLOAT3,XMFLOAT4,XMFLOAT3,int
+	);
+
 	bool RenderShadowShader(ID3D11DeviceContext*, int, XMMATRIX, XMMATRIX, XMMATRIX, XMMATRIX, XMMATRIX, ID3D11ShaderResourceView*, ID3D11ShaderResourceView*,
 		XMFLOAT4, XMFLOAT4, XMFLOAT3, float);
 
 	bool RenderDepthShader(ID3D11DeviceContext*, int, XMMATRIX, XMMATRIX, XMMATRIX);
 
-	
+	bool RenderDepthShaderInstanced(ID3D11DeviceContext*, int, int, XMMATRIX, XMMATRIX, XMMATRIX);
 private:
 	TextureShaderClass* m_TextureShader;
 	LightShaderClass* m_LightShader;

@@ -202,14 +202,14 @@ void ShaderManagerClass::Shutdown()
 }
 
 
-bool ShaderManagerClass::RenderTextureShader(ID3D11DeviceContext* device, int indexCount, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix,
+bool ShaderManagerClass::RenderTextureShader(ID3D11DeviceContext* device, int indexCount, int instanceCount, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix,
 											 ID3D11ShaderResourceView* texture)
 {
 	bool result;
 
 
 	// Render the model using the texture shader.
-	result = m_TextureShader->Render(device, indexCount, worldMatrix, viewMatrix, projectionMatrix, texture);
+	result = m_TextureShader->Render(device, indexCount, instanceCount, worldMatrix, viewMatrix, projectionMatrix, texture);
 	if(!result)
 	{
 		return false;
@@ -219,7 +219,7 @@ bool ShaderManagerClass::RenderTextureShader(ID3D11DeviceContext* device, int in
 }
 
 
-bool ShaderManagerClass::RenderLightShader(ID3D11DeviceContext* deviceContext, int indexCount, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix,
+bool ShaderManagerClass::RenderLightShader(ID3D11DeviceContext* deviceContext, int indexCount, int instanceCount, const XMMATRIX &worldMatrix, const XMMATRIX &viewMatrix, const XMMATRIX &projectionMatrix,
 	ID3D11ShaderResourceView* texture, XMFLOAT3 lightDirection, XMFLOAT4 ambient, XMFLOAT4 diffuse,
 	XMFLOAT3 cameraPosition, XMFLOAT4 specular, float specularPower)
 {
@@ -297,6 +297,12 @@ bool ShaderManagerClass::RenderPBRShader(ID3D11DeviceContext* deviceContext, int
 	return true;
 }
 
+bool ShaderManagerClass::RenderPBRShaderInstanced(ID3D11DeviceContext* deviceContext,int indexCount,int instanceCount,XMMATRIX worldMatrix,XMMATRIX viewMatrix,XMMATRIX projectionMatrix,ID3D11ShaderResourceView* albedoTexture,ID3D11ShaderResourceView* normalTexture,
+	ID3D11ShaderResourceView* metallicTexture,ID3D11ShaderResourceView* roughnessTexture,ID3D11ShaderResourceView* aoTexture,ID3D11ShaderResourceView* shadowMapTexture,XMMATRIX lightViewMatrix,XMMATRIX lightProjectionMatrix,XMFLOAT3 lightDirection,XMFLOAT4 diffuseColor,XMFLOAT3 cameraPosition,int debugMode)
+{
+	return m_PBRShader->RenderInstanced(deviceContext,indexCount,instanceCount,worldMatrix,viewMatrix,projectionMatrix,albedoTexture,normalTexture,metallicTexture,roughnessTexture,aoTexture,shadowMapTexture,lightViewMatrix,lightProjectionMatrix,lightDirection,diffuseColor,cameraPosition,debugMode);
+}
+
 bool ShaderManagerClass::RenderShadowShader(ID3D11DeviceContext* deviceContext, int indexCount, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMMATRIX lightViewMatrix, 
 	XMMATRIX lightProjectionMatrix, ID3D11ShaderResourceView* texture, ID3D11ShaderResourceView* depthMap, XMFLOAT4 ambientColor, XMFLOAT4 diffuseColor, XMFLOAT3 lightPosition, float bias)
 {
@@ -306,6 +312,20 @@ bool ShaderManagerClass::RenderShadowShader(ID3D11DeviceContext* deviceContext, 
 	result = m_ShadowShader->Render(deviceContext, indexCount, worldMatrix, viewMatrix, projectionMatrix, lightViewMatrix, lightProjectionMatrix, 
 		texture, depthMap, ambientColor, diffuseColor, lightPosition, bias);
 	if(!result)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool ShaderManagerClass::RenderDepthShaderInstanced(ID3D11DeviceContext* deviceContext, int indexCount, int instanceCount, XMMATRIX worldMatrix, XMMATRIX viewMatrix, XMMATRIX projectionMatrix)
+{
+	bool result;
+
+	//Render the model using the shadow shader.
+	result = m_DepthShader->RenderInstanced(deviceContext, indexCount, instanceCount, worldMatrix, viewMatrix, projectionMatrix);
+	if (!result)
 	{
 		return false;
 	}

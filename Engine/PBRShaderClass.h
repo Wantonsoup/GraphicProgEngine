@@ -63,7 +63,6 @@ private:
 		XMFLOAT3 shadowPadding;
 	};
 
-	ID3D11Buffer* m_lightMatrixBuffer;
 
 public:
 	PBRShaderClass();
@@ -78,6 +77,10 @@ public:
 		ID3D11ShaderResourceView*,
 		const XMMATRIX&, const XMMATRIX&,
 		XMFLOAT3, XMFLOAT4, XMFLOAT3, int debugMode = 0);
+	bool RenderInstanced(ID3D11DeviceContext*,int,int,XMMATRIX,XMMATRIX,XMMATRIX,
+		ID3D11ShaderResourceView*,ID3D11ShaderResourceView*,ID3D11ShaderResourceView*,ID3D11ShaderResourceView*,ID3D11ShaderResourceView*,ID3D11ShaderResourceView*,
+		XMMATRIX,XMMATRIX,XMFLOAT3,XMFLOAT4,XMFLOAT3,
+		int);
 
 private:
 	bool InitializeShader(ID3D11Device*, HWND, WCHAR*, WCHAR*);
@@ -91,7 +94,7 @@ private:
 		const XMMATRIX&, const XMMATRIX&,
 		XMFLOAT3, XMFLOAT4, XMFLOAT3, int debugMode);
 	void RenderShader(ID3D11DeviceContext*, int);
-
+	void RenderShaderInstanced(ID3D11DeviceContext*, int, int);
 private:
 	ID3D11VertexShader* m_vertexShader;
 	ID3D11PixelShader* m_pixelShader;
@@ -100,6 +103,7 @@ private:
 	ID3D11Buffer* m_cameraBuffer;
 	ID3D11Buffer* m_lightBuffer;
 	ID3D11Buffer* m_debugBuffer;
+	ID3D11Buffer* m_lightMatrixBuffer;
 	ID3D11SamplerState* m_sampleState;
 	ID3D11SamplerState* m_shadowSampleState;
 };

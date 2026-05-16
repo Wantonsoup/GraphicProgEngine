@@ -85,7 +85,7 @@ bool PBRShaderClass::InitializeShader(ID3D11Device* device, HWND hwnd, WCHAR* vs
 	ID3D10Blob* errorMessage;
 	ID3D10Blob* vertexShaderBuffer;
 	ID3D10Blob* pixelShaderBuffer;
-	D3D11_INPUT_ELEMENT_DESC polygonLayout[5];
+	D3D11_INPUT_ELEMENT_DESC polygonLayout[6];
 	unsigned int numElements;
 	D3D11_BUFFER_DESC matrixBufferDesc;
 	D3D11_BUFFER_DESC cameraBufferDesc;
@@ -197,6 +197,14 @@ bool PBRShaderClass::InitializeShader(ID3D11Device* device, HWND hwnd, WCHAR* vs
 	polygonLayout[4].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
 	polygonLayout[4].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 	polygonLayout[4].InstanceDataStepRate = 0;
+
+	polygonLayout[5].SemanticName = "TEXCOORD";
+	polygonLayout[5].SemanticIndex = 5;
+	polygonLayout[5].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+	polygonLayout[5].InputSlot = 1;
+	polygonLayout[5].AlignedByteOffset = 0;
+	polygonLayout[5].InputSlotClass = D3D11_INPUT_PER_INSTANCE_DATA;
+	polygonLayout[5].InstanceDataStepRate = 1;
 
 	// Get a count of the elements in the layout.
 	numElements = sizeof(polygonLayout) / sizeof(polygonLayout[0]);
@@ -565,7 +573,7 @@ bool PBRShaderClass::SetShaderParameters(ID3D11DeviceContext* deviceContext, con
 	dataPtr5 = (LightMatrixBufferType*)mappedResource.pData;
 	dataPtr5->lightView = XMMatrixTranspose(lightViewMatrix);
 	dataPtr5->lightProjection = XMMatrixTranspose(lightProjectionMatrix);
-	dataPtr5->shadowBias = 0.0022f;
+	dataPtr5->shadowBias = 0.00022f;
 	dataPtr5->shadowPadding = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
 	deviceContext->Unmap(m_lightMatrixBuffer, 0);
@@ -589,8 +597,81 @@ void PBRShaderClass::RenderShader(ID3D11DeviceContext* deviceContext, int indexC
 	// Set the sampler state in the pixel shader.
 	deviceContext->PSSetSamplers(0, 1, &m_sampleState);
 
+	// Set the shadow sampler state in the pixel shader.
+	deviceContext->PSSetSamplers(1, 1, &m_shadowSampleState);
+
 	// Render the triangles.
 	deviceContext->DrawIndexed(indexCount, 0, 0);
 
 	return;
 }
+
+bool PBRShaderClass::RenderInstanced(
+	ID3D11DeviceContext* deviceContext,
+	int indexCount,
+	int instanceCount,
+	XMMATRIX worldMatrix,
+	XMMATRIX viewMatrix,
+	XMMATRIX projectionMatrix,
+	ID3D11ShaderResourceView* albedoTexture,
+	ID3D11ShaderResourceView* normalTexture,
+	ID3D11ShaderResourceView* metallicTexture,
+	ID3D11ShaderResourceView* roughnessTexture,
+	ID3D11ShaderResourceView* aoTexture,
+	ID3D11ShaderResourceView* shadowMapTexture,
+	XMMATRIX lightViewMatrix,
+	XMMATRIX lightProjectionMatrix,
+	XMFLOAT3 lightDirection,
+	XMFLOAT4 diffuseColor,
+	XMFLOAT3 cameraPosition,
+	int debugMode)
+{
+	bool result;
+
+	result = SetShaderParameters(
+		deviceContext,
+		worldMatrix,
+		viewMatrix,
+		projectionMatrix,
+		albedoTexture,
+		normalTexture,
+		metallicTexture,
+		roughnessTexture,
+		aoTexture,
+		shadowMapTexture,
+		lightViewMatrix,
+		lightProjectionMatrix,
+		lightDirection,
+		diffuseColor,
+		cameraPosition,
+		debugMode
+	);
+
+	if (!result)
+	{
+		return false;
+	}
+
+	RenderShaderInstanced(deviceContext, indexCount, instanceCount);
+
+	return true;
+}
+
+void PBRShaderClass::RenderShaderInstanced(
+	ID3D11DeviceContext* deviceContext,
+	int indexCount,
+	int instanceCount)
+{
+	deviceContext->IASetInputLayout(m_layout);
+
+	deviceContext->VSSetShader(m_vertexShader, NULL, 0);
+	deviceContext->PSSetShader(m_pixelShader, NULL, 0);
+
+	deviceContext->PSSetSamplers(0, 1, &m_sampleState);
+
+	deviceContext->DrawIndexedInstanced(indexCount, instanceCount, 0, 0, 0);
+
+
+	return;
+}
+

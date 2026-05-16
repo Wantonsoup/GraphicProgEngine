@@ -1,8 +1,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Filename: modelclass.cpp
 ////////////////////////////////////////////////////////////////////////////////
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
 #include "modelclass.h"
-
 
 ModelClass::ModelClass()
 {
@@ -130,7 +131,7 @@ bool ModelClass::InitializeBuffers(ID3D11Device* device)
 {
 	VertexType* vertices;
 	unsigned long* indices;
-	D3D11_BUFFER_DESC vertexBufferDesc, indexBufferDesc, instanceBufferDesc;
+	D3D11_BUFFER_DESC vertexBufferDesc, indexBufferDesc;
 	D3D11_SUBRESOURCE_DATA vertexData, indexData;
 	HRESULT result;
 	int i;
@@ -179,7 +180,6 @@ bool ModelClass::InitializeBuffers(ID3D11Device* device)
 	{
 		return false;
 	}
-
 	// Set up the description of the static index buffer.
 	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 	indexBufferDesc.ByteWidth = sizeof(unsigned long) * m_indexCount;
@@ -200,12 +200,50 @@ bool ModelClass::InitializeBuffers(ID3D11Device* device)
 		return false;
 	}
 
-	// Release the arrays now that the vertex and index buffers have been created and loaded.
-	delete[] vertices;
-	vertices = 0;
+	// Set the number of instances.
+	m_instanceCount = 4;
 
-	delete[] indices;
-	indices = 0;
+	// Create instance array.
+	InstanceType* instances = new InstanceType[m_instanceCount];
+	if (!instances)
+	{
+		return false;
+	}
+
+	// Set instance positions.
+	instances[0].position = XMFLOAT3(-5.0f, 0.0f, 0.0f);
+	instances[1].position = XMFLOAT3(-2.0f, 0.0f, 0.0f);
+	instances[2].position = XMFLOAT3(2.0f, 0.0f, 0.0f);
+	instances[3].position = XMFLOAT3(5.0f, 0.0f, 0.0f);
+
+	// Create instance buffer description.
+	D3D11_BUFFER_DESC instanceBufferDesc;
+	ZeroMemory(&instanceBufferDesc, sizeof(instanceBufferDesc));
+
+	instanceBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	instanceBufferDesc.ByteWidth = sizeof(InstanceType) * m_instanceCount;
+	instanceBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	instanceBufferDesc.CPUAccessFlags = 0;
+	instanceBufferDesc.MiscFlags = 0;
+	instanceBufferDesc.StructureByteStride = 0;
+
+	// Give the instance data to DirectX.
+	D3D11_SUBRESOURCE_DATA instanceData;
+	ZeroMemory(&instanceData, sizeof(instanceData));
+	instanceData.pSysMem = instances;
+	instanceData.SysMemPitch = 0;
+	instanceData.SysMemSlicePitch = 0;
+
+	// Create instance buffer.
+	result = device->CreateBuffer(&instanceBufferDesc, &instanceData, &m_instanceBuffer);
+	if (FAILED(result))
+	{
+		return false;
+	}
+
+	// Release temp instance array.
+	delete[] instances;
+	instances = 0;
 
 	return true;
 }
@@ -213,6 +251,13 @@ bool ModelClass::InitializeBuffers(ID3D11Device* device)
 
 void ModelClass::ShutdownBuffers()
 {
+	// Release the instance buffer.
+	if (m_instanceBuffer)
+	{
+		m_instanceBuffer->Release();
+		m_instanceBuffer = 0;
+	}
+
 	// Release the index buffer.
 	if (m_indexBuffer)
 	{
@@ -233,37 +278,23 @@ void ModelClass::ShutdownBuffers()
 
 void ModelClass::RenderBuffers(ID3D11DeviceContext* deviceContext)
 {
-	unsigned int stride;
-	unsigned int offset;
+	if (m_instanceBuffer)
+	{
+		unsigned int strides[2] = { sizeof(VertexType), sizeof(InstanceType) };
+		unsigned int offsets[2] = { 0, 0 };
+		ID3D11Buffer* buffers[2] = { m_vertexBuffer, m_instanceBuffer };
 
+		deviceContext->IASetVertexBuffers(0, 2, buffers, strides, offsets);
+	}
+	else
+	{
+		unsigned int stride = sizeof(VertexType);
+		unsigned int offset = 0;
 
-	// Set vertex buffer stride and offset.
-	stride = sizeof(VertexType);
-	offset = 0;
-
-
-	// Set the vertex buffer to active in the input assembler so it can be rendered.
-	unsigned int strides[2];
-	unsigned int offsets[2];
-	ID3D11Buffer* bufferPointers[2];
-
-	strides[0] = sizeof(VertexType);
-	strides[1] = sizeof(InstanceType);
-
-	offsets[0] = 0;
-	offsets[1] = 0;
-
-	bufferPointers[0] = m_vertexBuffer;
-	bufferPointers[1] = m_instanceBuffer;
-
-	deviceContext->IASetVertexBuffers(0, 2, bufferPointers, strides, offsets);
-
-	// Set the index buffer to active in the input assembler so it can be rendered.
+		deviceContext->IASetVertexBuffers(0, 1, &m_vertexBuffer, &stride, &offset);
+	}
 	deviceContext->IASetIndexBuffer(m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-
-	// Set the type of primitive that should be rendered from this vertex buffer, in this case triangles.
 	deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
 	return;
 }
 
@@ -403,6 +434,7 @@ bool ModelClass::LoadObjModel(ID3D11Device* device, char* filename, WCHAR* textu
 			size_t fv = shape.mesh.num_face_vertices[f];
 
 			for (size_t v = 0; v < fv; v++) {
+				// Access to vertex
 				tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
 
 				VertexType vertex;

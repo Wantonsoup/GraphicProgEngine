@@ -26,8 +26,10 @@ cbuffer LightBuffer : register(b0) // sends to buffer
 
 cbuffer LightMatrixBuffer : register(b2)
 {
-	 float shadowBias;
-	 float3 shadowPadding;
+	matrix lightViewMatrix;
+    matrix lightProjectionMatrix;
+	float shadowBias;
+	float3 shadowPadding;
 };
 
 // Debug visualization modes:

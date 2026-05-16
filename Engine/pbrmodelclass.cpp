@@ -8,6 +8,10 @@ PBRModelClass::PBRModelClass()
 {
 	m_vertexBuffer = 0;
 	m_indexBuffer = 0;
+	m_instanceBuffer = 0;
+	m_vertexCount = 0;
+	m_indexCount = 0;
+	m_instanceCount = 0;
 	m_model = 0;
 	m_AlbedoTexture = 0;
 	m_NormalMapTexture = 0;
@@ -32,27 +36,107 @@ bool PBRModelClass::Initialize(ID3D11Device* device, char* modelFilename, WCHAR*
 {
 	bool result;
 
+	string filename = modelFilename;
+	transform(filename.begin(), filename.end(), filename.begin(), ::tolower);
+	//OBJ path
+	if (filename.find(".obj") != string::npos)
+	{
+		result = LoadObjModel(device, modelFilename, albedoFilename, normalFilename, metallicFilename, roughnessFilename, aoFilename);
+		if (!result)
+		{
+			return false;
+		}
 
-	// Load in the model data.
+		return true;
+	}
+	
 	result = LoadModel(modelFilename);
-	if(!result)
+	if (!result)
 	{
 		return false;
 	}
 
-	// Calculate the tangent and binormal vectors for the model.
 	CalculateModelVectors();
-
-	// Initialize the vertex and index buffers.
+	
 	result = InitializeBuffers(device);
-	if(!result)
+	if (!result)
 	{
 		return false;
 	}
 
-	// Load the textures for this model.
 	result = LoadTextures(device, albedoFilename, normalFilename, metallicFilename, roughnessFilename, aoFilename);
-	if(!result)
+	if (!result)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool PBRModelClass::InitializeInstanced(ID3D11Device* device, char* modelFilename, WCHAR* albedoFilename, WCHAR* normalFilename, WCHAR* metallicFilename, WCHAR* roughnessFilename, WCHAR* aoFilename, int instanceCount, XMFLOAT3 instanceAreaCenter, XMFLOAT2 instanceAreaSize)
+{
+	bool result;
+
+	std::string filename = modelFilename;
+	std::transform(filename.begin(), filename.end(), filename.begin(), ::tolower);
+
+	// OBJ path.
+	if (filename.find(".obj") != std::string::npos)
+	{
+		result = LoadObjModel(
+			device,
+			modelFilename,
+			albedoFilename,
+			normalFilename,
+			metallicFilename,
+			roughnessFilename,
+			aoFilename
+		);
+
+		if (!result)
+		{
+			return false;
+		}
+	}
+	else
+	{
+		result = LoadModel(modelFilename);
+		if (!result)
+		{
+			return false;
+		}
+
+		CalculateModelVectors();
+
+		result = InitializeBuffers(device);
+		if (!result)
+		{
+			return false;
+		}
+
+		result = LoadTextures(
+			device,
+			albedoFilename,
+			normalFilename,
+			metallicFilename,
+			roughnessFilename,
+			aoFilename
+		);
+
+		if (!result)
+		{
+			return false;
+		}
+	}
+
+	result = InitializeInstanceBuffer(
+		device,
+		instanceCount,
+		instanceAreaCenter,
+		instanceAreaSize
+	);
+
+	if (!result)
 	{
 		return false;
 	}
@@ -84,6 +168,11 @@ void PBRModelClass::Render(ID3D11DeviceContext* deviceContext)
 	return;
 }
 
+
+int PBRModelClass::GetInstanceCount()
+{
+	return m_instanceCount;
+}
 
 int PBRModelClass::GetIndexCount()
 {
@@ -210,6 +299,7 @@ bool PBRModelClass::InitializeBuffers(ID3D11Device* device)
 
 void PBRModelClass::ShutdownBuffers()
 {
+	ShutdownInstanceBuffer();
 	// Release the index buffer.
 	if(m_indexBuffer)
 	{
@@ -227,24 +317,101 @@ void PBRModelClass::ShutdownBuffers()
 	return;
 }
 
+bool PBRModelClass::InitializeInstanceBuffer(ID3D11Device* device, int instanceCount, XMFLOAT3 instanceAreaCenter, XMFLOAT2 instanceAreaSize)
+{
+	InstanceType* instances;
+	D3D11_BUFFER_DESC instanceBufferDesc;
+	D3D11_SUBRESOURCE_DATA instanceData;
+	HRESULT result;
+
+	m_instanceCount = instanceCount;
+
+	instances = new InstanceType[m_instanceCount];
+	if (!instances)
+	{
+		return false;
+	}
+
+	for (int i = 0; i < m_instanceCount; i++)
+	{
+		float randomX = ((float)rand() / RAND_MAX) - 0.5f;
+		float randomZ = ((float)rand() / RAND_MAX) - 0.5f;
+
+		float x = instanceAreaCenter.x + (randomX * instanceAreaSize.x);
+		float y = instanceAreaCenter.y;
+		float z = instanceAreaCenter.z + (randomZ * instanceAreaSize.y);
+
+		instances[i].position = XMFLOAT3(x, y, z);
+		instances[i].padding = 0.0f;
+	}
+
+	instanceBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	instanceBufferDesc.ByteWidth = sizeof(InstanceType) * m_instanceCount;
+	instanceBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	instanceBufferDesc.CPUAccessFlags = 0;
+	instanceBufferDesc.MiscFlags = 0;
+	instanceBufferDesc.StructureByteStride = 0;
+
+	instanceData.pSysMem = instances;
+	instanceData.SysMemPitch = 0;
+	instanceData.SysMemSlicePitch = 0;
+
+	result = device->CreateBuffer(&instanceBufferDesc, &instanceData, &m_instanceBuffer);
+	if (FAILED(result))
+	{
+		delete[] instances;
+		instances = 0;
+		return false;
+	}
+
+	delete[] instances;
+	instances = 0;
+
+	return true;
+}
+
+void PBRModelClass::ShutdownInstanceBuffer()
+{
+	if (m_instanceBuffer)
+	{
+		m_instanceBuffer->Release();
+		m_instanceBuffer = 0;
+	}
+
+	m_instanceCount = 0;
+
+	return;
+}
+
 
 void PBRModelClass::RenderBuffers(ID3D11DeviceContext* deviceContext)
 {
-	unsigned int stride;
-	unsigned int offset;
+	unsigned int strides[2];
+	unsigned int offsets[2];
+	ID3D11Buffer* bufferPointers[2];
 
+	if (m_instanceBuffer)
+	{
+		strides[0] = sizeof(VertexType);
+		strides[1] = sizeof(InstanceType);
 
-	// Set vertex buffer stride and offset.
-	stride = sizeof(VertexType);
-	offset = 0;
+		offsets[0] = 0;
+		offsets[1] = 0;
 
-	// Set the vertex buffer to active in the input assembler so it can be rendered.
-	deviceContext->IASetVertexBuffers(0, 1, &m_vertexBuffer, &stride, &offset);
+		bufferPointers[0] = m_vertexBuffer;
+		bufferPointers[1] = m_instanceBuffer;
 
-	// Set the index buffer to active in the input assembler so it can be rendered.
+		deviceContext->IASetVertexBuffers(0, 2, bufferPointers, strides, offsets);
+	}
+	else
+	{
+		unsigned int stride = sizeof(VertexType);
+		unsigned int offset = 0;
+
+		deviceContext->IASetVertexBuffers(0, 1, &m_vertexBuffer, &stride, &offset);
+	}
+
 	deviceContext->IASetIndexBuffer(m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-
-	// Set the type of primitive that should be rendered from this vertex buffer, in this case triangles.
 	deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	return;
@@ -435,6 +602,159 @@ void PBRModelClass::ReleaseModel()
 	}
 
 	return;
+}
+
+bool PBRModelClass::LoadObjModel(ID3D11Device* device, char* filename, WCHAR* albedoFilename, WCHAR* normalFilename, WCHAR* metallicFilename, WCHAR* roughnessFilename, WCHAR* aoFilename)
+{
+	tinyobj::ObjReaderConfig reader_config;
+	reader_config.triangulate = true;
+
+	tinyobj::ObjReader reader;
+	if (!reader.ParseFromFile(filename, reader_config))
+	{
+		return false;
+	}
+
+	const auto& attrib = reader.GetAttrib();
+	const auto& shapes = reader.GetShapes();
+
+	std::vector<VertexType> vertices;
+	std::vector<unsigned long> indices;
+	std::unordered_map<std::string, unsigned long> vertexCache;
+
+	for (const auto& shape : shapes)
+	{
+		size_t index_offset = 0;
+
+		for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++)
+		{
+			size_t fv = shape.mesh.num_face_vertices[f];
+
+			for (size_t v = 0; v < fv; v++)
+			{
+				tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
+
+				VertexType vertex;
+
+				int v_idx = idx.vertex_index;
+				vertex.position = XMFLOAT3(
+					attrib.vertices[3 * v_idx + 0],
+					attrib.vertices[3 * v_idx + 1],
+					attrib.vertices[3 * v_idx + 2]
+				);
+
+				if (idx.texcoord_index >= 0)
+				{
+					int t_idx = idx.texcoord_index;
+					vertex.texture = XMFLOAT2(
+						attrib.texcoords[2 * t_idx + 0],
+						1.0f - attrib.texcoords[2 * t_idx + 1]
+					);
+				}
+				else
+				{
+					vertex.texture = XMFLOAT2(0.0f, 0.0f);
+				}
+
+				if (idx.normal_index >= 0)
+				{
+					int n_idx = idx.normal_index;
+					vertex.normal = XMFLOAT3(
+						attrib.normals[3 * n_idx + 0],
+						attrib.normals[3 * n_idx + 1],
+						attrib.normals[3 * n_idx + 2]
+					);
+				}
+				else
+				{
+					vertex.normal = XMFLOAT3(0.0f, 1.0f, 0.0f);
+				}
+
+				// Temporary tangent/binormal so PBR normal mapping does not crash/use garbage.
+				vertex.tangent = XMFLOAT3(1.0f, 0.0f, 0.0f);
+				vertex.binormal = XMFLOAT3(0.0f, 0.0f, 1.0f);
+
+				std::string key =
+					std::to_string(idx.vertex_index) + "/" +
+					std::to_string(idx.texcoord_index) + "/" +
+					std::to_string(idx.normal_index);
+
+				if (vertexCache.count(key) == 0)
+				{
+					vertexCache[key] = (unsigned long)vertices.size();
+					vertices.push_back(vertex);
+				}
+
+				indices.push_back(vertexCache[key]);
+			}
+
+			index_offset += fv;
+		}
+	}
+
+	m_vertexCount = (int)vertices.size();
+	m_indexCount = (int)indices.size();
+
+	if (m_vertexCount == 0 || m_indexCount == 0)
+	{
+		return false;
+	}
+
+	D3D11_BUFFER_DESC vertexBufferDesc;
+	ZeroMemory(&vertexBufferDesc, sizeof(vertexBufferDesc));
+
+	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	vertexBufferDesc.ByteWidth = sizeof(VertexType) * m_vertexCount;
+	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	vertexBufferDesc.CPUAccessFlags = 0;
+	vertexBufferDesc.MiscFlags = 0;
+	vertexBufferDesc.StructureByteStride = 0;
+
+	D3D11_SUBRESOURCE_DATA vertexData;
+	ZeroMemory(&vertexData, sizeof(vertexData));
+	vertexData.pSysMem = vertices.data();
+
+	HRESULT result = device->CreateBuffer(&vertexBufferDesc, &vertexData, &m_vertexBuffer);
+	if (FAILED(result))
+	{
+		return false;
+	}
+
+	D3D11_BUFFER_DESC indexBufferDesc;
+	ZeroMemory(&indexBufferDesc, sizeof(indexBufferDesc));
+
+	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	indexBufferDesc.ByteWidth = sizeof(unsigned long) * m_indexCount;
+	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	indexBufferDesc.CPUAccessFlags = 0;
+	indexBufferDesc.MiscFlags = 0;
+	indexBufferDesc.StructureByteStride = 0;
+
+	D3D11_SUBRESOURCE_DATA indexData;
+	ZeroMemory(&indexData, sizeof(indexData));
+	indexData.pSysMem = indices.data();
+
+	result = device->CreateBuffer(&indexBufferDesc, &indexData, &m_indexBuffer);
+	if (FAILED(result))
+	{
+		return false;
+	}
+
+	result = LoadTextures(
+		device,
+		albedoFilename,
+		normalFilename,
+		metallicFilename,
+		roughnessFilename,
+		aoFilename
+	);
+
+	if (!result)
+	{
+		return false;
+	}
+
+	return true;
 }
 
 

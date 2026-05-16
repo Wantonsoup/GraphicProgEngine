@@ -2,8 +2,6 @@
 // Filename: systemclass.cpp
 ////////////////////////////////////////////////////////////////////////////////
 #include "systemclass.h"
-
-
 SystemClass::SystemClass()
 {
 	m_Input = 0;
@@ -34,6 +32,7 @@ bool SystemClass::Initialize()
 	// Initialize the windows api.
 	InitializeWindows(screenWidth, screenHeight);
 
+	/*
 	// Create the input object.  This object will be used to handle reading the keyboard and mouse input from the user.
 	m_Input = new InputClass;
 	if (!m_Input)
@@ -47,6 +46,7 @@ bool SystemClass::Initialize()
 	{
 		return false;
 	}
+	*/
 	
 	// Create the graphics object.  This object will handle rendering all the graphics for this application.
 	m_Graphics = new GraphicsClass;
@@ -77,12 +77,14 @@ void SystemClass::Shutdown()
 	}
 
 	// Release the input object.
+	/*
 	if (m_Input)
 	{
 		m_Input->Shutdown();
 		delete m_Input;
 		m_Input = 0;
 	}
+	*/
 	
 
 	// Shutdown the window.
@@ -138,6 +140,7 @@ bool SystemClass::Frame()
 	bool result;
 
 	// Read the user input.
+	/*
 	result = m_Input->Frame();
 	if (!result)
 	{
@@ -149,6 +152,7 @@ bool SystemClass::Frame()
 	{
 		return false;
 	}
+	*/
 
 	// Do the frame processing for the graphics object.
 	result = m_Graphics->Frame();
@@ -260,7 +264,8 @@ void SystemClass::InitializeWindows(int& screenWidth, int& screenHeight)
 
 	// Create the window with the screen settings and get the handle to it.
 	m_hwnd = CreateWindowEx(WS_EX_APPWINDOW, m_applicationName, m_applicationName,
-		WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_POPUP,
+		//WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_POPUP,
+		WS_OVERLAPPEDWINDOW,
 		posX, posY, screenWidth, screenHeight, NULL, NULL, m_hinstance, NULL);
 
 	// Bring the window up on the screen and set it as main focus.

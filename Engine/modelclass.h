@@ -3,7 +3,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 #ifndef _MODELCLASS_H_
 #define _MODELCLASS_H_
-#define TINYOBJLOADER_IMPLEMENTATION
 
 
 //////////////
@@ -16,18 +15,15 @@ using namespace DirectX;
 #include <fstream>
 #include <vector>
 using namespace std;
-
-
-#include "tiny_obj_loader.h"
 #include <sstream>
 #include <unordered_map>
 #include <string>
-
 
 ///////////////////////
 // MY CLASS INCLUDES //
 ///////////////////////
 #include "textureclass.h"
+
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -49,13 +45,14 @@ private:
 		float tu, tv;
 		float nx, ny, nz;
 	};
-
+public:
 	struct InstanceType
 	{
 		XMFLOAT3 position;
 		XMFLOAT3 rotation;
 		XMFLOAT3 scale;
 		XMMATRIX world;
+		
 	};
 
 

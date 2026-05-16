@@ -31,6 +31,7 @@ struct VertexInputType
 	float3 normal : NORMAL;
 	float3 tangent : TANGENT;
 	float3 binormal : BINORMAL;
+    float3 instancePosition : TEXCOORD5;
 };
 
 cbuffer LightMatrixBuffer : register(b2)
@@ -63,6 +64,9 @@ PixelInputType PBRVertexShader(VertexInputType input)
 
 	// Change the position vector to be 4 units for proper matrix calculations.
     input.position.w = 1.0f;
+
+    // Add instance offset
+    input.position.xyz += input.instancePosition;
 
 	// Calculate the world position of the vertex.
 	float4 worldPosition = mul(input.position, worldMatrix);

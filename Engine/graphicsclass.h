@@ -6,7 +6,9 @@
 
 // Inlucdes //
 #include <vector>
-
+#include <algorithm>
+#include <cstdlib>
+#include <ctime>
 
 ///////////////////////
 // MY CLASS INCLUDES //
@@ -24,6 +26,8 @@
 #include "cubeskybox.h"
 #include "rendertextureclass.h";
 
+#include "fpsclass.h"
+#include "frustumclass.h"
 
 /////////////
 // GLOBALS //
@@ -35,7 +39,7 @@ const float SCREEN_NEAR = 0.1f; // increase near plane to reduce shadow acne
 
 
 // Shadow map depth bias — tweak if you see shadow acne or peter-panning.
-const float shadow_bias = 0.001f;
+const float shadow_bias = 0.00001f;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -56,6 +60,8 @@ struct SceneModel
 	XMFLOAT3    scale;
 	float       rotationSpeed;  // radians per ms multiplier
 	XMFLOAT3    rotationAxis;   // which axis to rotate around (1,0,0) (0,1,0) (0,0,1)
+	bool		useFrustumCulling;
+	
 };
 
 struct SceneBumpModel 
@@ -74,6 +80,9 @@ struct ScenePBRModel
 	XMFLOAT3       scale;
 	float          rotationSpeed;
 	XMFLOAT3       rotationAxis;
+	bool		   castsShadow;
+	bool	       useFrustumCulling;
+	bool		   useInstancing;
 };
 
 
@@ -95,6 +104,7 @@ private:
 	//bool Render(float);
 	//Xu
 	bool HandleMovementInput(float);
+	bool UpdateFPS();
 
 	bool RenderDepthToTexture(); // pass 1: built shadow map
 	bool Render(); // pass 2: render scene
@@ -110,6 +120,14 @@ private:
 	LightClass* m_Light;
 	CubeSkyBox* m_Skybox;
 	ModelClass* m_LightModel;
+	// FPS & Frustum
+	FpsClass* m_Fps;
+	FrustumClass* m_Frustum;
+
+	HWND m_hwnd;
+
+	int m_previousFps;
+	int m_renderCount;
 	// Shadow map render target
 	RenderTextureClass* m_ShadowMap;
 
@@ -123,6 +141,8 @@ private:
 
 	// Sphere position
 	XMFLOAT3 m_SpherePos;
+
+	// bool 
 };
 
 #endif
